@@ -1,0 +1,1496 @@
+<title>Konehomma</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&display=swap">
+<style>
+:root{
+  /* Full-bleed pixel game: canvas fills the stage, chunky toy buttons float in the bottom corners */
+  --grass:#6c8f3e; --ink:#2a2420; --paper:#fff4d6;
+  --yellow:#f4b81c; --yellow-hi:#ffd866; --yellow-lo:#c48c08;
+  --red:#e2552b; --red-hi:#ff8a5c; --red-lo:#a8381a;
+  --font:"Pixelify Sans", ui-monospace, "Courier New", monospace;
+  --s:clamp(58px,17vw,84px);
+  --c-loader:#f4b81c; --c-truck:#3e80d6; --c-exc:#f07a1a;
+  --m:clamp(48px,13vw,60px);
+}
+html{height:100%;box-sizing:border-box}
+body{height:100%;background:var(--grass);color:var(--paper);font-family:var(--font);overflow:hidden;
+  touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+.stage{position:relative;height:100%;overflow:hidden}
+#cv{position:absolute;left:0;top:0;image-rendering:pixelated;image-rendering:crisp-edges}
+.pad{position:absolute;bottom:16px;display:none;gap:12px;align-items:flex-end}
+body.touch .pad{display:flex}
+body.touch .pad.sw{display:none;bottom:calc(16px + var(--s) + 26px)}
+body.touch.exc .pad.sw{display:flex}
+.btn.sw{background:var(--orange,#e8731c);box-shadow:inset -5px -5px 0 rgba(0,0,0,.25),inset 5px 5px 0 rgba(255,255,255,.3),0 5px 0 var(--ink)}
+.btn.sw.on{box-shadow:inset 5px 5px 0 rgba(0,0,0,.25),0 1px 0 var(--ink)}
+.btn.sw svg{width:66%;height:66%}
+.pad.l{left:max(16px,env(safe-area-inset-left,0px))}
+.pad.r{right:max(16px,env(safe-area-inset-right,0px))}
+.col{display:flex;flex-direction:column;gap:12px}
+.btn{appearance:none;-webkit-appearance:none;width:var(--s);height:var(--s);padding:0;margin:0;border:4px solid var(--ink);border-radius:6px;
+  background:var(--yellow);box-shadow:inset -5px -5px 0 var(--yellow-lo),inset 5px 5px 0 var(--yellow-hi),0 5px 0 var(--ink);
+  display:grid;place-items:center;touch-action:none;cursor:pointer}
+.btn.on{transform:translateY(4px);box-shadow:inset 5px 5px 0 var(--yellow-lo),0 1px 0 var(--ink)}
+.btn svg{width:56%;height:56%;fill:var(--ink);shape-rendering:crispEdges;pointer-events:none}
+.btn.act{width:calc(var(--s) * 1.35);height:calc(var(--s) * 1.35);border-radius:50%;background:var(--red);
+  box-shadow:inset -6px -6px 0 var(--red-lo),inset 6px 6px 0 var(--red-hi),0 5px 0 var(--ink)}
+.btn.act.on{box-shadow:inset 6px 6px 0 var(--red-lo),0 1px 0 var(--ink)}
+.btn.act svg{fill:var(--paper);width:60%;height:60%}
+.btn:focus-visible{outline:3px solid var(--paper);outline-offset:3px}
+.hint{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);background:rgba(42,36,32,.85);color:var(--paper);
+  padding:8px 14px;border-radius:4px;font-size:15px;letter-spacing:.02em;white-space:nowrap;max-width:calc(100% - 32px);
+  overflow:hidden;text-overflow:ellipsis;transition:opacity .8s;pointer-events:none}
+.hint b{color:var(--yellow);font-weight:700}
+.hint b.num{font-family:ui-monospace,"Courier New",monospace}
+.hint.gone{opacity:0}
+body.touch .hint{display:none}
+.reset{position:absolute;top:12px;right:max(12px,env(safe-area-inset-right,0px));width:40px;height:40px;padding:0;
+  border:3px solid var(--ink);border-radius:6px;background:rgba(255,244,214,.75);display:grid;place-items:center;cursor:pointer}
+.reset svg{width:60%;height:60%;fill:var(--ink)}
+.reset:focus-visible{outline:3px solid var(--paper);outline-offset:2px}
+.mpick{position:absolute;top:12px;left:max(12px,env(safe-area-inset-left,0px));display:flex;gap:10px}
+.mb{appearance:none;-webkit-appearance:none;position:relative;width:var(--m);height:var(--m);padding:0;margin:0;cursor:pointer;
+  border:4px solid var(--ink);border-radius:6px;background:var(--mc);box-shadow:inset -4px -4px 0 rgba(0,0,0,.22),inset 4px 4px 0 rgba(255,255,255,.3),0 4px 0 var(--ink);
+  display:grid;place-items:center;touch-action:none;opacity:.8}
+.mb svg{width:70%;height:70%;fill:var(--ink);shape-rendering:crispEdges;pointer-events:none;margin-top:14%}
+.mb span{position:absolute;left:3px;top:1px;font:700 16px/1 ui-monospace,"Courier New",monospace;color:var(--ink);pointer-events:none}
+.mb.sel{opacity:1;outline:3px solid var(--paper);outline-offset:2px;transform:translateY(-2px)}
+.mb.on{transform:translateY(3px);box-shadow:inset 4px 4px 0 rgba(0,0,0,.22),0 1px 0 var(--ink)}
+.start{position:absolute;inset:0;display:grid;place-items:center;align-content:center;gap:clamp(14px,3vh,28px);
+  background:rgba(42,36,32,.5);z-index:5;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.start[hidden]{display:none}
+.start h1{margin:0;font:700 clamp(34px,9vw,64px)/1 var(--font);color:var(--yellow);letter-spacing:.04em;text-align:center;
+  text-shadow:4px 4px 0 var(--ink),-2px -2px 0 var(--ink),2px -2px 0 var(--ink),-2px 2px 0 var(--ink)}
+.startbtn{appearance:none;-webkit-appearance:none;width:min(62vw,52vh,280px);aspect-ratio:1;max-width:100%;border-radius:50%;cursor:pointer;
+  border:6px solid var(--ink);background:var(--red);color:var(--paper);display:grid;place-items:center;align-content:center;gap:4%;padding:0;
+  box-shadow:inset -10px -10px 0 var(--red-lo),inset 10px 10px 0 var(--red-hi),0 10px 0 var(--ink);
+  font:700 clamp(34px,10vw,60px)/1 var(--font);letter-spacing:.06em;animation:pulse 1.4s ease-in-out infinite;touch-action:manipulation}
+.startbtn svg{width:34%;height:auto;fill:var(--paper);shape-rendering:crispEdges}
+.startbtn:active{transform:translateY(6px);box-shadow:inset 10px 10px 0 var(--red-lo),0 3px 0 var(--ink)}
+.startbtn:focus-visible{outline:4px solid var(--paper);outline-offset:6px}
+@keyframes pulse{0%,100%{scale:1}50%{scale:1.06}}
+@media (prefers-reduced-motion: reduce){.hint{transition:none}.startbtn{animation:none}}
+</style>
+
+<div class="stage" id="stage">
+  <canvas id="cv"></canvas>
+
+  <div class="mpick" id="mpick">
+    <button class="mb" tabindex="-1" data-m="0" style="--mc:var(--c-loader)" aria-label="1 Pyöräkuormaaja"><span>1</span><svg viewBox="0 0 12 12"><path d="M3 2H6V5H8L10 7H11V10H9V8H8V7H1V5H3Z"/><circle cx="3" cy="9" r="1.6"/><circle cx="7" cy="9" r="1.6"/></svg></button>
+    <button class="mb" tabindex="-1" data-m="1" style="--mc:var(--c-truck)" aria-label="2 Kuorma-auto"><span>2</span><svg viewBox="0 0 12 12"><path d="M1 4H7V8H1Z M8 3H11V8H8Z"/><circle cx="3" cy="9" r="1.5"/><circle cx="9.3" cy="9" r="1.5"/></svg></button>
+    <button class="mb" tabindex="-1" data-m="2" style="--mc:var(--c-exc)" aria-label="3 Kaivuri"><span>3</span><svg viewBox="0 0 12 12"><path d="M1 5H6V3H8V7H1Z M7 4L9 1L11 2L11 6L9 6L10 3L8 5Z"/><circle cx="2.5" cy="9" r="1.5"/><circle cx="6" cy="9" r="1.5"/></svg></button>
+  </div>
+
+  <div class="pad l sw">
+    <button class="btn sw" tabindex="-1" data-k="swl" aria-label="Käännä tornia vasemmalle"><svg viewBox="0 0 12 12"><path d="M6 2A4 4 0 1 1 2.2 7.2H4A2.3 2.3 0 1 0 6 3.7V5.2L2.5 3.2L6 0.7Z"/></svg></button>
+    <button class="btn sw" tabindex="-1" data-k="swr" aria-label="Käännä tornia oikealle"><svg viewBox="0 0 12 12" style="transform:scaleX(-1)"><path d="M6 2A4 4 0 1 1 2.2 7.2H4A2.3 2.3 0 1 0 6 3.7V5.2L2.5 3.2L6 0.7Z"/></svg></button>
+  </div>
+  <div class="pad l">
+    <button class="btn" tabindex="-1" data-k="left" aria-label="Käännä vasemmalle"><svg viewBox="0 0 8 8" style="transform:rotate(-90deg)"><path d="M4 1L7 4H5V7H3V4H1Z"/></svg></button>
+    <button class="btn" tabindex="-1" data-k="right" aria-label="Käännä oikealle"><svg viewBox="0 0 8 8" style="transform:rotate(90deg)"><path d="M4 1L7 4H5V7H3V4H1Z"/></svg></button>
+  </div>
+  <div class="pad r">
+    <button class="btn act" tabindex="-1" id="act" aria-label="Kauha tai lava"><svg viewBox="0 0 12 12"><path id="acticon" d="M1 2H3V8H9L10 6H11V9L10 10H2L1 9Z"/></svg></button>
+    <div class="col">
+      <button class="btn" tabindex="-1" data-k="up" aria-label="Eteenpäin"><svg viewBox="0 0 8 8"><path d="M4 1L7 4H5V7H3V4H1Z"/></svg></button>
+      <button class="btn" tabindex="-1" data-k="down" aria-label="Peruuta"><svg viewBox="0 0 8 8" style="transform:rotate(180deg)"><path d="M4 1L7 4H5V7H3V4H1Z"/></svg></button>
+    </div>
+  </div>
+
+  <div class="start" id="start">
+    <h1>AARON<br>KONEHOMMA</h1>
+    <button class="startbtn" id="startbtn" aria-label="Aloita peli"><svg viewBox="0 0 10 10"><path d="M2 1H4V2H5V3H6V4H7V6H6V7H5V8H4V9H2Z"/></svg>START</button>
+  </div>
+  <div class="hint" id="hint"><b>← →</b> kääntää · <b>↑</b> eteen · <b>↓</b> peruutus · <b>välilyönti</b> kauha / lava · <b>Del PgDn</b> kaivurin torni · <b class="num">1 2 3</b> vaihtaa konetta</div>
+  <button class="reset" id="reset" aria-label="Aloita alusta"><svg viewBox="0 0 10 10"><path d="M5 1A4 4 0 1 0 9 5H7.4A2.4 2.4 0 1 1 5 2.6V4.2L7.6 1.8L5 -0.6Z"/></svg></button>
+</div>
+
+<script>
+(() => {
+/* ---------- world constants ---------- */
+const TW = 40, TH = 20, ZH = 22;          // isometric tile size and height scale (pixels per world unit)
+const M = 60, G0 = 6, G1 = 54;            // world size, gravel field bounds
+const HW = 1.45;                          // road half width, in on-screen units of 20 px
+const sd = (dx, dy) => Math.hypot((dy - dx) * 20, (dx + dy) * 10) / 20;   // on-screen distance of a ground offset
+const BR = 0.12, D2 = (2 * BR) * (2 * BR); // dirt ball radius
+const GW = M * TW, GH = M * TH;
+const PILE = { x: 30, y: 30 };
+const H0 = Math.atan2(3.7, 1.4);
+const START_L = { x: 17, y: 36.8, h: -2.17 };
+const START_T = { x: 37.5, y: 27.5, h: -Math.PI / 4 };
+const START_E = { x: 26, y: 31.3, h: -0.31 };
+
+const stage = document.getElementById('stage');
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+let IW = 0, IH = 0, SC = 2;
+
+const isTouch = matchMedia('(pointer: coarse)').matches || (navigator.maxTouchPoints || 0) > 0;
+if (isTouch) document.body.classList.add('touch');
+
+function resize() {
+  const W = stage.clientWidth, H = stage.clientHeight, dpr = window.devicePixelRatio || 1;
+  SC = Math.max(dpr >= 2 ? 0.8 : 1.1, Math.min(W, H) / 440);
+  if (dpr >= 2) SC = Math.max(1, Math.round(SC * dpr)) / dpr;   // whole device pixels per game pixel
+  IW = Math.ceil(W / SC); IH = Math.ceil(H / SC);
+  cv.width = IW; cv.height = IH;
+  cv.style.width = IW * SC + 'px'; cv.style.height = IH * SC + 'px';
+  ctx.imageSmoothingEnabled = false;
+}
+addEventListener('resize', resize); resize();
+
+/* ---------- helpers ---------- */
+function hh(x, y) {
+  let n = (Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263)) | 0;
+  n = Math.imul(n ^ (n >>> 13), 1274126177); n ^= n >>> 16;
+  return (n >>> 0) / 4294967296;
+}
+function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const approach = (v, t, d) => v < t ? Math.min(t, v + d) : Math.max(t, v - d);
+const gp = (x, y) => [GW / 2 + (y - x) * TW / 2, (x + y) * TH / 2];   // world -> ground canvas pixel
+
+/* ---------- road: a wiggly closed loop ---------- */
+const NS = 1440, RX = new Float32Array(NS), RY = new Float32Array(NS), RS = new Float32Array(NS);
+{ let acc = 0;
+  for (let i = 0; i < NS; i++) {
+    const t = i / NS * Math.PI * 2, r = 16 + 2.4 * Math.sin(3 * t) + 1.4 * Math.cos(2 * t + 0.7);
+    RX[i] = 30 + r * Math.cos(t); RY[i] = 30 + r * Math.sin(t);
+    if (i) acc += sd(RX[i] - RX[i - 1], RY[i] - RY[i - 1]);
+    RS[i] = acc;
+  } }
+const GR = 8, GN = M * GR + 1, DF = new Float32Array(GN * GN).fill(9), DI = new Int32Array(GN * GN);
+for (let i = 0; i < NS; i++) {
+  const x0 = Math.max(0, Math.floor((RX[i] - 3) * GR)), x1 = Math.min(GN - 1, Math.ceil((RX[i] + 3) * GR));
+  const y0 = Math.max(0, Math.floor((RY[i] - 3) * GR)), y1 = Math.min(GN - 1, Math.ceil((RY[i] + 3) * GR));
+  for (let gy = y0; gy <= y1; gy++) for (let gx = x0; gx <= x1; gx++) {
+    const d = sd(gx / GR - RX[i], gy / GR - RY[i]), k = gy * GN + gx;
+    if (d < DF[k]) { DF[k] = d; DI[k] = i; }
+  }
+}
+let RD = 9, RSV = 0;
+function roadAt(x, y) {
+  const fx = x * GR, fy = y * GR, ix = Math.floor(fx), iy = Math.floor(fy);
+  if (ix < 0 || iy < 0 || ix >= GN - 1 || iy >= GN - 1) { RD = 9; return; }
+  const ax = fx - ix, ay = fy - iy, k = iy * GN + ix;
+  RD = (DF[k] * (1 - ax) + DF[k + 1] * ax) * (1 - ay) + (DF[k + GN] * (1 - ax) + DF[k + GN + 1] * ax) * ay;
+  RSV = RS[DI[Math.round(fy) * GN + Math.round(fx)]];
+}
+const gEdge = (x, y) => Math.min(x - G0, G1 - x, y - G0, G1 - y) + 0.35 * Math.sin(x * 1.3 + y * 0.7) + 0.25 * Math.sin(x * 0.5 - y * 2.1);
+
+/* ---------- bake the ground once ---------- */
+const ground = document.createElement('canvas'); ground.width = GW; ground.height = GH;
+{
+  const g = ground.getContext('2d'), img = g.createImageData(GW, GH), D = img.data;
+  const C = {
+    g1: [184, 167, 135], g2: [176, 159, 127], g3: [192, 176, 144], gD: [140, 124, 98], gL: [216, 202, 172], gM: [160, 144, 114], gS: [150, 135, 108],
+    a: [78, 80, 87], aD: [67, 69, 75], aL: [98, 100, 108], aE: [58, 60, 66], line: [232, 230, 218], yel: [242, 196, 62],
+    gr: [108, 143, 62], grD: [90, 122, 51], grL: [128, 165, 74], edge: [146, 128, 96]
+  };
+  let o = 0;
+  for (let py = 0; py < GH; py++) for (let px = 0; px < GW; px++, o += 4) {
+    const a = (px - GW / 2) / (TW / 2), b = py / (TH / 2), x = (b - a) / 2, y = (a + b) / 2;
+    const n = hh(px, py); let col;
+    const e = gEdge(x, y);
+    if (e < 0) {
+      col = n < 0.12 ? C.grD : n > 0.9 ? C.grL : C.gr;
+      if (e > -0.2) col = n < 0.55 ? C.edge : C.grD;
+    } else {
+      roadAt(x, y);
+      if (RD < HW) {
+        if (RD > HW - 0.1) col = C.aE;
+        else if (RD > HW - 0.34 && RD < HW - 0.22) col = C.line;
+        else if (RD < 0.09 && (RSV % 1.5) < 0.8) col = C.yel;
+        else col = n < 0.1 ? C.aD : n > 0.93 ? C.aL : C.a;
+      } else {
+        const pch = hh(Math.floor(x * 1.5) + 999, Math.floor(y * 1.5));
+        col = pch < 0.33 ? C.g1 : pch < 0.66 ? C.g2 : C.g3;
+        if (n < 0.07) col = C.gD; else if (n > 0.94) col = C.gL; else if (n > 0.45 && n < 0.5) col = C.gM;
+        if (RD < HW + 0.14) col = n < 0.5 ? C.gS : C.gD;
+      }
+    }
+    D[o] = col[0]; D[o + 1] = col[1]; D[o + 2] = col[2]; D[o + 3] = 255;
+  }
+  g.putImageData(img, 0, 0);
+  const R = rng(7);
+  for (let i = 0; i < 180; i++) {               // stones on the gravel
+    const x = G0 + 1 + R() * (G1 - G0 - 2), y = G0 + 1 + R() * (G1 - G0 - 2);
+    roadAt(x, y);
+    if (RD < HW + 0.5 || Math.hypot(x - PILE.x, y - PILE.y) < 3) continue;
+    const [sx, sy] = gp(x, y).map(Math.round), big = R() < 0.3;
+    g.fillStyle = '#76706a'; g.fillRect(sx, sy, big ? 4 : 3, big ? 3 : 2);
+    g.fillStyle = '#a49e94'; g.fillRect(sx, sy, big ? 3 : 2, 1);
+  }
+  for (let i = 0; i < 650; i++) {               // grass tufts
+    const x = R() * M, y = R() * M;
+    if (gEdge(x, y) > -0.5) continue;
+    const [sx, sy] = gp(x, y).map(Math.round);
+    g.fillStyle = '#56772f'; g.fillRect(sx, sy, 1, 2); g.fillRect(sx + 2, sy, 1, 2); g.fillRect(sx + 1, sy + 1, 1, 1);
+    g.fillStyle = '#8fb553'; g.fillRect(sx + 1, sy - 1, 1, 1);
+  }
+}
+/* ---------- holes to fill with gravel ---------- */
+const HOLES = [];
+function holeDepth(H, x, y) {
+  const d = Math.hypot(x - H.x, y - H.y);
+  return d < H.r ? -H.d * Math.min(1, (1 - d / H.r) * 3.2) : 0;
+}
+function makeHole(x, y, r, d, cap, road) {
+  const H = { x, y, r, d, cap, road, done: false, t: -99, h: 0, rect: [-r * 0.45, r * 0.45, r * 0.45] };
+  const [cx, cy] = gp(x, y);
+  H.bx = Math.floor(cx - r * 29 - 2); H.by = Math.floor(cy - r * 15 - 2);
+  const w = Math.ceil(r * 58 + 4), h = Math.ceil(r * 30 + 4);
+  const open = document.createElement('canvas'), patch = document.createElement('canvas');
+  open.width = patch.width = w; open.height = patch.height = h;
+  const io = open.getContext('2d').createImageData(w, h), ip = patch.getContext('2d').createImageData(w, h);
+  const top = road ? [70, 70, 76] : [150, 122, 90], wall = road ? [132, 100, 68] : [140, 106, 72], deep = [74, 52, 34];
+  for (let py = 0; py < h; py++) for (let px = 0; px < w; px++) {
+    const gx = H.bx + px + 0.5, gy = H.by + py + 0.5, a = (gx - GW / 2) / (TW / 2), b = gy / (TH / 2);
+    const wx = (b - a) / 2, wy = (a + b) / 2, dist = Math.hypot(wx - x, wy - y);
+    if (dist >= r) continue;
+    // follow the view ray into the hole until it meets the bowl surface
+    let z = 0;
+    for (let k = 0; k <= 160; k++) {
+      const dl = k * 0.012, rz = -dl * 10 / ZH, sz = holeDepth(H, wx - dl / 2, wy - dl / 2);
+      if (sz >= rz) { z = sz; break; }
+    }
+    const f = -z / d, n = 0.9 + 0.2 * hh(px + 77, py + 13), o = (py * w + px) * 4;
+    const c0 = f < 0.22 ? top : wall, c = f < 0.22 ? c0 : [0, 1, 2].map(i => wall[i] + (deep[i] - wall[i]) * Math.min(1, (f - 0.22) / 0.78));
+    io.data[o] = c[0] * n; io.data[o + 1] = c[1] * n; io.data[o + 2] = c[2] * n; io.data[o + 3] = 255;
+    const ring = dist > r * 0.86, pc = road ? (ring ? [104, 106, 112] : [60, 61, 67]) : (ring ? [138, 120, 92] : [158, 138, 106]);
+    ip.data[o] = pc[0] * n; ip.data[o + 1] = pc[1] * n; ip.data[o + 2] = pc[2] * n; ip.data[o + 3] = 255;
+  }
+  open.getContext('2d').putImageData(io, 0, 0); patch.getContext('2d').putImageData(ip, 0, 0);
+  H.spr = open; H.patch = patch;
+  H.rim = []; for (let i = 0; i < 24; i++) { const a = i / 24 * Math.PI * 2; H.rim.push([x + Math.cos(a) * r, y + Math.sin(a) * r, 0]); }
+  HOLES.push(H);
+  return H;
+}
+function gz(x, y) {
+  for (const H of HOLES) if (!H.done) { const z = holeDepth(H, x, y); if (z < 0) return z; }
+  return 0;
+}
+function holeAt(x, y) {
+  for (const H of HOLES) if (!H.done && Math.hypot(x - H.x, y - H.y) < H.r) return H;
+  return null;
+}
+function roadPt(t) {
+  const i = ((Math.round(t / (2 * Math.PI) * NS)) % NS + NS) % NS, j = (i + 4) % NS;
+  const tx = RX[j] - RX[i], ty = RY[j] - RY[i], l = Math.hypot(tx, ty), nx = -ty / l, ny = tx / l;
+  const k = 1 / sd(nx, ny);                                 // world length of one on-screen road unit across the road
+  return (o) => [RX[i] + nx * o * k, RY[i] + ny * o * k];
+}
+const PIT = makeHole(33, 36.5, 1.6, 0.75, 85, false);
+makeHole(36.5, 33, 1.2, 0.6, 40, false);
+makeHole(24.5, 36, 1.2, 0.6, 40, false);
+const ROADHOLES = [1.28, 1.44, 1.6, 1.76].map((t, i) => { const [x, y] = roadPt(t)(i % 2 ? 0.45 : -0.45); return makeHole(x, y, 0.62, 0.42, 17, true); });
+
+/* roadwork cones and signs */
+function pix(rows, pal) {
+  const c = document.createElement('canvas'); c.width = rows[0].length; c.height = rows.length;
+  const g = c.getContext('2d');
+  rows.forEach((r, y) => [...r].forEach((ch, x) => { if (pal[ch]) { g.fillStyle = pal[ch]; g.fillRect(x, y, 1, 1); } }));
+  return c;
+}
+const CONE = pix(['...o...', '..oOo..', '..wWw..', '..wWw..', '.ooOOo.', '.ooOOo.', '.wwWWw.', 'ooooOOo', 'kkkkkkk'],
+  { o: '#ff7a24', O: '#d9561a', w: '#fff4e0', W: '#d8cdbd', k: '#2a2420' });
+const SIGN = pix([
+  '......r......', '.....rrr.....', '.....ryr.....', '....ryyyr....', '....ryyyr....', '...ryykyyr...', '...ryykkyr...', '..ryykkykyr..',
+  '..ryykyykyr..', '.ryyykyyyykr.', '.ryykkyykkkr.', 'rrrrrrrrrrrrr', '......g......', '......g......', '......g......', '......g......', '......g......', '.....ggg.....'],
+  { r: '#d8331f', y: '#ffd23a', k: '#2a2420', g: '#8a8a90' });
+const DECO = [];
+for (const t of [1.14, 1.9]) for (const o of [-1.05, -0.35, 0.35, 1.05]) DECO.push({ p: roadPt(t)(o), spr: CONE, ax: 3, ay: 8 });
+for (let t = 1.22; t < 1.86; t += 0.155) for (const o of [-1.25, 1.25]) DECO.push({ p: roadPt(t)(o), spr: CONE, ax: 3, ay: 8 });
+for (const t of [1.03, 2.01]) DECO.push({ p: roadPt(t)(-2.3), spr: SIGN, ax: 6, ay: 17 });
+
+/* tyre tracks live on their own layer so a reset can wipe them */
+const tracks = document.createElement('canvas'); tracks.width = GW; tracks.height = GH;
+const tctx = tracks.getContext('2d');
+
+/* ---------- ball sprites ---------- */
+function ballSprite(k) {
+  const c = document.createElement('canvas'); c.width = c.height = 7;
+  const g = c.getContext('2d');
+  const pal = [['#4a2f17', '#6e4522', '#8a5a2e', '#a8743f', '#c99a62'],
+               ['#45301c', '#684628', '#835c35', '#9f7647', '#c09466'],
+               ['#4d2c14', '#74431f', '#93592a', '#b2733b', '#d09358'],
+               ['#3c3b3a', '#5e5b57', '#7b7771', '#99948c', '#bdb7ad'],
+               ['#433d38', '#655d55', '#837a70', '#a2988c', '#c4baad']][k];
+  for (let y = 0; y < 7; y++) for (let x = 0; x < 7; x++) {
+    const dx = x - 3, dy = y - 3, r2 = dx * dx + dy * dy;
+    if (r2 > 10) continue;
+    const l = (-dx * 0.55 - dy * 0.85) / 3;
+    let ci = r2 > 6 ? 0 : l > 0.55 ? 4 : l > 0.15 ? 3 : l > -0.35 ? 2 : 1;
+    if (r2 > 6 && l > 0.3) ci = 1;
+    g.fillStyle = pal[ci]; g.fillRect(x, y, 1, 1);
+  }
+  return c;
+}
+const BALLSPR = [0, 1, 2, 3, 4].map(ballSprite);
+/* big grey boulders: hand-shaded pixel rocks, three different outlines */
+function rockSprite(seed) {
+  const W = 24, H = 22, c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d'), R = rng(seed * 97 + 5), n = 9, rad = [];
+  for (let i = 0; i < n; i++) rad.push(0.8 + R() * 0.2);
+  const rf = a => { const t = ((a / 6.2832) + 1) % 1 * n, i = Math.floor(t), f = t - i; return rad[i % n] * (1 - f) + rad[(i + 1) % n] * f; };
+  const pal = ['#2c2d31', '#4a4b50', '#686a6f', '#85878b', '#a6a8a8', '#c8c8c2'];
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const dx = (x + 0.5 - W / 2) / 11.4, dy = (y + 0.5 - H / 2) / 10.4, d = Math.hypot(dx, dy), lim = rf(Math.atan2(dy, dx));
+    if (d > lim) continue;
+    const e = d / lim, nz = Math.sqrt(Math.max(0, 1 - e * e)), nx = dx / lim, ny = dy / lim;
+    const l = -nx * 0.45 - ny * 0.7 + nz * 0.6 + (hh(Math.floor(x / 4) + seed * 11, Math.floor(y / 4) + seed * 5) - 0.5) * 0.7;
+    let ci = e > 0.88 ? 0 : l > 0.95 ? 5 : l > 0.7 ? 4 : l > 0.45 ? 3 : l > 0.2 ? 2 : 1;
+    if (e <= 0.88 && hh(x * 7 + seed, y * 13) < 0.06) ci = Math.max(1, ci - 1);
+    g.fillStyle = pal[ci]; g.fillRect(x, y, 1, 1);
+  }
+  return c;
+}
+const ROCKSPR = [1, 2, 3].map(rockSprite);
+const RR = 0.36;                              // boulder radius
+
+/* ---------- audio ---------- */
+let AC = null, master, engO, engG, beepG, hydG, noise, lastThud = 0, lastPlop = 0;
+function audio() {
+  if (AC) { if (AC.state === 'suspended') AC.resume(); return; }
+  try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { AC = null; return; }
+  master = AC.createGain(); master.gain.value = 0.7; master.connect(AC.destination);
+  engO = AC.createOscillator(); engO.type = 'sawtooth'; engO.frequency.value = 46;
+  const lp = AC.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 280;
+  engG = AC.createGain(); engG.gain.value = 0; engO.connect(lp).connect(engG).connect(master); engO.start();
+  const bo = AC.createOscillator(); bo.type = 'square'; bo.frequency.value = 1080;
+  beepG = AC.createGain(); beepG.gain.value = 0; bo.connect(beepG).connect(master); bo.start();
+  const ho = AC.createOscillator(); ho.type = 'triangle'; ho.frequency.value = 150;
+  hydG = AC.createGain(); hydG.gain.value = 0; ho.connect(hydG).connect(master); ho.start();
+  noise = AC.createBuffer(1, Math.floor(AC.sampleRate * 0.25), AC.sampleRate);
+  const d = noise.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+}
+const setG = (g, v) => { if (AC) g.gain.setTargetAtTime(v, AC.currentTime, 0.015); };
+function thud(v) {
+  if (!AC) return; const t = AC.currentTime; if (t - lastThud < 0.05) return; lastThud = t;
+  const s = AC.createBufferSource(); s.buffer = noise;
+  const f = AC.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 520;
+  const g = AC.createGain(); g.gain.setValueAtTime(0.35 * v, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+  s.connect(f).connect(g).connect(master); s.start(t); s.stop(t + 0.16);
+}
+function hiss() {                              // compressed-air brake release, a bit different every time
+  if (!AC) return; const t = AC.currentTime, R = Math.random, dur = 0.45 + R() * 0.7, peak = 0.03 + R() * 0.02;
+  const s = AC.createBufferSource(); s.buffer = noise; s.loop = true; s.playbackRate.value = 0.85 + R() * 0.4;
+  const f = AC.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 2400 + R() * 1400;
+  const f2 = AC.createBiquadFilter(); f2.type = 'lowpass'; f2.frequency.value = 6500 + R() * 4000;
+  const g = AC.createGain(), tail = dur * (0.55 + R() * 0.3);
+  g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(peak, t + 0.02 + R() * 0.03);
+  g.gain.setValueAtTime(peak * (0.7 + R() * 0.3), t + 0.1 + R() * 0.08); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  f.frequency.linearRampToValueAtTime(f.frequency.value * (0.5 + R() * 0.3), t + tail);
+  s.connect(f).connect(f2).connect(g).connect(master); s.start(t); s.stop(t + dur + 0.05);
+}
+let pedalT = 0, braked = false, lastActive = null;
+function crunch() {
+  if (!AC) return; const t = AC.currentTime;
+  for (let i = 0; i < 4; i++) {
+    const s = AC.createBufferSource(); s.buffer = noise;
+    const f = AC.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 480 + i * 140; f.Q.value = 0.8;
+    const g = AC.createGain(), t0 = t + i * 0.11;
+    g.gain.setValueAtTime(0.0001, t); g.gain.setValueAtTime(0.5, t0); g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.14);
+    s.connect(f).connect(g).connect(master); s.start(t0); s.stop(t0 + 0.16);
+  }
+}
+function jingle(big) {
+  if (!AC) return; const t = AC.currentTime;
+  const notes = big ? [523, 659, 784, 1047, 784, 1047, 1319] : [523, 659, 784, 1047];
+  notes.forEach((f, i) => {
+    const o = AC.createOscillator(); o.type = 'triangle'; o.frequency.value = f;
+    const g = AC.createGain(), s0 = t + i * 0.11;
+    g.gain.setValueAtTime(0.0001, t); g.gain.setValueAtTime(0.12, s0); g.gain.exponentialRampToValueAtTime(0.001, s0 + 0.22);
+    o.connect(g).connect(master); o.start(s0); o.stop(s0 + 0.25);
+  });
+}
+function plop() {
+  if (!AC) return; const t = AC.currentTime; if (t - lastPlop < 0.07) return; lastPlop = t;
+  const o = AC.createOscillator(); o.type = 'sine';
+  o.frequency.setValueAtTime(440 + Math.random() * 80, t); o.frequency.exponentialRampToValueAtTime(150, t + 0.09);
+  const g = AC.createGain(); g.gain.setValueAtTime(0.12, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.11);
+  o.connect(g).connect(master); o.start(t); o.stop(t + 0.12);
+}
+
+/* ---------- machines ---------- */
+// Loader bucket states: 0 = down, 1 = up (carry), 2 = dump
+const ARM = [-0.42, 0.75, 0.75], BKT = [0, 0.55, -1.05];
+// Truck bed states: 0 = down, 1 = tipped
+const TILT = [0, 0.85];
+const BED_HU = -2.0, BED_HW = 0.95, BED_LEN = 2.9, BED_V = 0.88;   // bed hinge at the back of the truck
+
+// Excavator poses [boom, stick, bucket] as absolute angles in the side plane:
+// 0 = up (start), 1 = down, 2 = scoop, 3 = up with load, 4 = dump (then back to 0 by itself)
+const EXP = [[0.9, -1.2, -2.9], [0.27, -1.25, -1.45], [0.3, -1.75, -3.0], [0.9, -1.2, -2.9], [0.75, -0.5, 0.6]];
+const EX_RATE = [0.7, 1.0, 1.9];
+const EX_P0 = [0.55, 1.45], EX_LB = 2.0, EX_LS = 1.5, EX_BL = 0.6, EX_V = -0.25, EX_BV = 0.38;
+const EXSLOTS = [];
+for (const p of [0.12, 0.26, 0.4]) for (const v of [-0.27, -0.09, 0.09, 0.27]) EXSLOTS.push([p, 0.13, v]);
+for (const p of [0.18, 0.36]) for (const v of [-0.18, 0, 0.18]) EXSLOTS.push([p, 0.32, v]);
+
+const SLOTS = [];
+{ const R = rng(3), q0 = -0.32 + BR + 0.02;
+  for (const p of [0.14, 0.38, 0.62]) for (const v of [-0.6, -0.36, -0.12, 0.12, 0.36, 0.6]) SLOTS.push([p, q0, v]);
+  for (const p of [0.16, 0.4]) for (const v of [-0.48, -0.24, 0, 0.24, 0.48]) SLOTS.push([p, q0 + 0.21, v]);
+  for (const v of [-0.24, 0, 0.24]) SLOTS.push([0.28, q0 + 0.42, v]);
+  for (const s of SLOTS) { s[0] += (R() - 0.5) * 0.05; s[2] += (R() - 0.5) * 0.06; }
+}
+
+const loader = {
+  kind: 'loader', icon: 'M1 2H3V8H9L10 6H11V9L10 10H2L1 9Z',
+  art: true,   // frame-steered: steer is the bend angle at the centre joint, x/y is that joint, h is the rear frame heading
+  rect: [-1.65, 1.3, 0.92], wb: 1.6, R: 0.45, tyre: 0.16, vmax: 2.3, vrev: 1.4, maxSteer: 0.6, top: 2.1,
+  wheels: [[-0.8, 0.72, 0, 0], [-0.8, -0.72, 0, 0], [0.8, 0.72, 0, 1], [0.8, -0.72, 0, 1]]
+};
+const truck = {
+  kind: 'truck', icon: 'M1 9H8V7H10V5H11V10H1Z M2 6L7 2L8 3L3 7Z',
+  rect: [-2.15, 2.28, 1.0], wb: 2.8, R: 0.42, tyre: 0.16, vmax: 2.6, vrev: 1.4, maxSteer: 0.5, top: 2.1,
+  wheels: [[1.45, 0.78, 1], [1.45, -0.78, 1], [-0.4, 0.78, 0], [-0.4, -0.78, 0], [-1.2, 0.78, 0], [-1.2, -0.78, 0]]
+};
+const exc = {
+  kind: 'exc', swingable: true, icon: 'M1 3H11V6L9 9H3L1 6Z M2 9V11H4V9Z M5 9V11H7V9Z M8 9V11H10V9Z',
+  rect: [-1.6, 1.3, 0.95], wb: 1.8, R: 0.42, tyre: 0.16, vmax: 2.2, vrev: 1.3, maxSteer: 0.5, top: 2.4,
+  wheels: [[0.9, 0.72, 1], [0.9, -0.72, 1], [-0.9, 0.72, 0], [-0.9, -0.72, 0]]
+};
+loader.phase = 0; truck.phase = 2; exc.phase = 4;
+// Rock crusher on tracks with a conveyor that keeps a gravel pile topped up
+const CR = { x: 21, y: 28.5, h: -Math.PI / 4, rect: [-2.75, 2.7, 0.95], roll: 0, phase: 0, timer: 0, belt: 0 };
+const CR_B0 = [1.1, 0, 0.62], CR_B1 = [4.4, 0, 2.3];      // conveyor tail and head (u, v, w)
+const CR_LEN = Math.hypot(CR_B1[0] - CR_B0[0], CR_B1[2] - CR_B0[2]);
+const CR_DU = (CR_B1[0] - CR_B0[0]) / CR_LEN, CR_DW = (CR_B1[2] - CR_B0[2]) / CR_LEN;
+const crLocal = (u, v, w) => { const c = Math.cos(CR.h), s = Math.sin(CR.h); return [CR.x + u * c - v * s, CR.y + u * s + v * c, w]; };
+const CR_DROP = crLocal(4.85, 0, 0);
+const machines = [loader, truck, exc];
+let active = loader;
+let balls = [], rocks = [];
+const keys = { left: 0, right: 0, up: 0, down: 0, swl: 0, swr: 0 };
+
+function resetMachine(m, s) { Object.assign(m, { x: s.x, y: s.y, h: s.h, steer: 0, speed: 0, roll: 0, beep: 0, trackAcc: 0 }); }
+function reset() {
+  resetMachine(loader, START_L); resetMachine(truck, START_T);
+  Object.assign(loader, { alpha: ARM[0], beta: BKT[0], state: 0, slots: SLOTS.map(() => null), rk: [null, null], rkT: 0 });
+  Object.assign(truck, { tilt: 0, state: 0, bed: [] });
+  resetMachine(exc, START_E);
+  Object.assign(exc, { rock: null, swing: 0, swung: false, state: 0, j: EXP[0].slice(), slots: EXSLOTS.map(() => null), wait: 0, tm: 0 });
+  tctx.clearRect(0, 0, GW, GH);
+  for (const H of HOLES) { H.done = false; H.t = -99; }
+  sparks = []; smoke = [];
+  balls = [];
+  grid.clear();
+  const R = rng(11);
+  for (let i = 0; i < 360; i++) {
+    const a = R() * Math.PI * 2, r = Math.sqrt(R()) * 1.45;
+    const b = { x: PILE.x + Math.cos(a) * r, y: PILE.y + Math.sin(a) * r, z: 6, st: 'rest', v: i % 3, vx: 0, vy: 0, vz: 0 };
+    settle(b); balls.push(b); gridAdd(b);
+  }
+  for (let i = 0; i < 70; i++) {               // gravel already under the conveyor
+    const a = R() * Math.PI * 2, r = Math.sqrt(R()) * 0.8;
+    const b = { x: CR_DROP[0] + Math.cos(a) * r, y: CR_DROP[1] + Math.sin(a) * r, z: 6, st: 'rest', v: 3 + i % 2, vx: 0, vy: 0, vz: 0 };
+    settle(b); balls.push(b); gridAdd(b);
+  }
+  CR.timer = 0; CR.burst = 0; CR.shake = 0;
+  rocks = [];                                  // boulders on the gravel next to the grass in the north-west
+  { const Rk = rng(21); let tries = 0;
+    while (rocks.length < 12 && tries++ < 600) {
+      const x = 8.4 + (Rk() + Rk() + Rk() - 1.5) / 1.5 * 1.1, y = 23.5 + (Rk() + Rk() + Rk() - 1.5) / 1.5 * 5.2;
+      if (x < 7.2 || x > 9.8 || y < 17.5 || y > 29.5) continue;
+      if (rocks.some(r => Math.hypot(r.x - x, r.y - y) < 1.0)) continue;
+      rocks.push({ x, y, z: RR, vx: 0, vy: 0, vz: 0, st: 'rest', s: rocks.length % 3, lt: 1 });
+    }
+  }
+  setActive(loader);
+}
+
+const acticon = document.getElementById('acticon');
+const mbtns = [...document.querySelectorAll('.mb')];
+function setActive(m) {
+  active = m; acticon.setAttribute('d', m.icon);
+  document.body.classList.toggle('exc', !!m.swingable);
+  mbtns.forEach((b, i) => b.classList.toggle('sel', machines[i] === m));
+}
+function nextMachine() { setActive(machines[(machines.indexOf(active) + 1) % machines.length]); }
+function action() {
+  if (active === loader) loader.state = (loader.state + 1) % 3;
+  else if (active === truck) truck.state = (truck.state + 1) % 2;
+  else if (exc.state < 4) exc.state++;
+}
+function excGeo(E) {
+  const [B, S, K] = E.j, c = Math.cos(E.h + E.swing), s = Math.sin(E.h + E.swing);
+  const p1 = [EX_P0[0] + EX_LB * Math.cos(B), EX_P0[1] + EX_LB * Math.sin(B)];
+  const p2 = [p1[0] + EX_LS * Math.cos(S), p1[1] + EX_LS * Math.sin(S)];
+  const d = [Math.cos(K), Math.sin(K)], n = [d[1], -d[0]];       // n points into the bucket's opening
+  const loc = (p, q, v) => { const u = p2[0] + d[0] * p + n[0] * q, w = p2[1] + d[1] * p + n[1] * q, vv = v + EX_V;
+    return [E.x + u * c - vv * s, E.y + u * s + vv * c, w]; };
+  return { p1, p2, d, n, loc };
+}
+
+/* oriented rectangles for machine-to-machine bumping */
+function bodiesOf(m) {
+  if (!m.art) return [m];
+  return [{ x: m.x, y: m.y, h: m.h, rect: [-1.65, 0.05, 0.92] }, { x: m.x, y: m.y, h: m.h + m.steer, rect: [-0.05, 1.3, 0.92] }];
+}
+function hits(a, b) {
+  for (const p of bodiesOf(a)) for (const q of bodiesOf(b)) if (overlap(p, q)) return true;
+  return false;
+}
+function corners(m) {
+  const c = Math.cos(m.h), s = Math.sin(m.h), [u0, u1, vm] = m.rect;
+  return [[u0, -vm], [u1, -vm], [u1, vm], [u0, vm]].map(([u, v]) => [m.x + u * c - v * s, m.y + u * s + v * c]);
+}
+function overlap(a, b) {
+  const A = corners(a), B = corners(b);
+  for (const Pp of [A, B]) for (let i = 0; i < 2; i++) {
+    const ax = -(Pp[i + 1][1] - Pp[i][1]), ay = Pp[i + 1][0] - Pp[i][0];
+    let a0 = Infinity, a1 = -Infinity, b0 = Infinity, b1 = -Infinity;
+    for (const p of A) { const d = p[0] * ax + p[1] * ay; a0 = Math.min(a0, d); a1 = Math.max(a1, d); }
+    for (const p of B) { const d = p[0] * ax + p[1] * ay; b0 = Math.min(b0, d); b1 = Math.max(b1, d); }
+    if (a1 < b0 || b1 < a0) return false;
+  }
+  return true;
+}
+
+function drive(m, dt, on) {
+  const k = on ? keys : { left: 0, right: 0, up: 0, down: 0 };
+  const prev = [m.x, m.y, m.h, m.steer], s0 = m.steer;
+  m.swung = false;
+  if (m.swingable && on && keys.swl !== keys.swr) {
+    m.swing += (keys.swl ? 1 : -1) * 0.9 * dt; m.swung = true;   // turn the upper structure with its own buttons
+  }
+  if (k.left && !k.right) m.steer = Math.min(m.maxSteer, m.steer + (m.art ? 0.9 : 1.5) * dt);
+  else if (k.right && !k.left) m.steer = Math.max(-m.maxSteer, m.steer - (m.art ? 0.9 : 1.5) * dt);
+  else if (on) m.steer = approach(m.steer, 0, 0.8 * dt * (m.art ? Math.min(1, Math.abs(m.speed) / 0.5) : 1));
+  const target = k.up ? m.vmax : k.down ? -m.vrev : 0;
+  m.speed = approach(m.speed, target, (target === 0 ? 2.8 : 1.8) * dt);
+  if (m.art) {
+    // bending: both halves swing around the centre joint
+    m.h -= (m.steer - s0) / 2;
+    // driving: the joint moves along the mid heading, the rear axle follows without sliding
+    const hl = m.wb / 2, rx = m.x - hl * Math.cos(m.h), ry = m.y - hl * Math.sin(m.h), hm = m.h + m.steer / 2;
+    m.x += Math.cos(hm) * m.speed * dt; m.y += Math.sin(hm) * m.speed * dt;
+    m.h = Math.atan2(m.y - ry, m.x - rx);
+  } else {
+    m.h += m.speed / m.wb * Math.tan(m.steer) * dt;
+    m.x += Math.cos(m.h) * m.speed * dt; m.y += Math.sin(m.h) * m.speed * dt;
+  }
+  m.x = Math.max(3, Math.min(M - 3, m.x)); m.y = Math.max(3, Math.min(M - 3, m.y));
+  for (const o of [...machines, CR, ...HOLES.filter(H => !H.done)]) if (o !== m && hits(m, o)) { [m.x, m.y, m.h, m.steer] = prev; m.speed = 0; break; }
+  m.roll += m.speed * dt / m.R;
+  m.trackAcc += Math.abs(m.speed) * dt;
+  while (m.trackAcc >= 0.12) { m.trackAcc -= 0.12; stampTracks(m); }
+}
+function stampTracks(m) {
+  tctx.fillStyle = 'rgba(70,52,34,0.36)';
+  for (const [u, v, steered, fr] of m.wheels) {
+    const fh = m.h + (fr ? m.steer : 0), a = fh + (steered ? m.steer : 0), c = Math.cos(fh), s = Math.sin(fh);
+    const cx = m.x + u * c - v * s, cy = m.y + u * s + v * c;
+    const fx = Math.cos(a) * 0.035, fy = Math.sin(a) * 0.035, sx = -Math.sin(a) * m.tyre, sy = Math.cos(a) * m.tyre;
+    const q = [[fx + sx, fy + sy], [fx - sx, fy - sy], [-fx - sx, -fy - sy], [-fx + sx, -fy + sy]].map(([dx, dy]) => gp(cx + dx, cy + dy));
+    tctx.beginPath(); tctx.moveTo(q[0][0], q[0][1]);
+    for (let i = 1; i < 4; i++) tctx.lineTo(q[i][0], q[i][1]);
+    tctx.closePath(); tctx.fill();
+  }
+}
+
+/* ---------- dirt physics on the ground ---------- */
+let SJ = null;
+// spatial grid of resting stones so each lookup only checks close neighbours
+const GC = 0.25, grid = new Map();
+const gkey = (ix, iy) => ix * 4096 + iy;
+function gridAdd(b) {
+  const k = gkey(Math.floor(b.x / GC), Math.floor(b.y / GC));
+  let a = grid.get(k); if (!a) grid.set(k, a = []); a.push(b);
+}
+function gridBuild() { grid.clear(); for (const b of balls) if (b.st === 'rest') gridAdd(b); }
+function sup(b, maxZ) {
+  let h = BR + gz(b.x, b.y); SJ = null;
+  const ix = Math.floor(b.x / GC), iy = Math.floor(b.y / GC);
+  for (let gx = ix - 1; gx <= ix + 1; gx++) for (let gy = iy - 1; gy <= iy + 1; gy++) {
+  const cell = grid.get(gkey(gx, gy)); if (!cell) continue;
+  for (const o of cell) {
+    if (o === b || o.st !== 'rest' || o.z >= maxZ) continue;
+    const dx = b.x - o.x, dy = b.y - o.y, d2 = dx * dx + dy * dy;
+    if (d2 >= D2) continue;
+    const z = o.z + Math.sqrt(D2 - d2);
+    if (z > h) { h = z; SJ = o; }
+  }
+  }
+  return h;
+}
+function settle(b) {
+  for (let it = 0; it < 30; it++) {
+    b.z = sup(b, b.z + 0.01);
+    if (!SJ) {                         // on the bare ground: roll down into a hole
+      const H = holeAt(b.x, b.y);
+      if (H) {
+        const dx = H.x - b.x, dy = H.y - b.y, dd = Math.hypot(dx, dy);
+        if (dd > 0.05) {
+          const st = Math.min(0.08, dd), nx = b.x + dx / dd * st, ny = b.y + dy / dd * st;
+          if (gz(nx, ny) < gz(b.x, b.y) - 1e-4) { b.x = nx; b.y = ny; continue; }
+        }
+      }
+      return;
+    }
+    const dx = b.x - SJ.x, dy = b.y - SJ.y, d = Math.hypot(dx, dy);
+    if (d < BR * 1.75) {              // perched on top of one ball: roll off
+      let ux, uy;
+      if (d < 1e-4) { const a = Math.random() * 6.283; ux = Math.cos(a); uy = Math.sin(a); } else { ux = dx / d; uy = dy / d; }
+      b.x += ux * BR * 0.6; b.y += uy * BR * 0.6; continue;
+    }
+    return;
+  }
+}
+
+/* ---------- dirt on the truck bed (bed coordinates pu, pv, pw) ---------- */
+const BED_FLOOR = 0.05;
+function supBed(b, maxW) {
+  let h = BED_FLOOR + BR; SJ = null;
+  for (const o of truck.bed) {
+    if (o === b || o.pw >= maxW) continue;
+    const du = b.pu - o.pu, dv = b.pv - o.pv, d2 = du * du + dv * dv;
+    if (d2 >= D2) continue;
+    const w = o.pw + Math.sqrt(D2 - d2);
+    if (w > h) { h = w; SJ = o; }
+  }
+  return h;
+}
+function clampBed(b) {
+  b.pu = Math.max(0.08 + BR, Math.min(BED_LEN - 0.06 - BR, b.pu));
+  b.pv = Math.max(-BED_V + 0.04 + BR, Math.min(BED_V - 0.04 - BR, b.pv));
+}
+function settleBed(b) {
+  clampBed(b);
+  // like a load being levelled: look around the landing spot and pick the lowest place nearby
+  { const pu = b.pu, pv = b.pv, top = b.pw + 0.01;
+    let best = [pu, pv], bh = supBed(b, top) - 0.02;
+    for (let i = 0; i < 14; i++) {
+      const a = Math.random() * 6.283, r = 0.15 + Math.random() * 0.75;
+      b.pu = pu + Math.cos(a) * r; b.pv = pv + Math.sin(a) * r; clampBed(b);
+      const h = supBed(b, top);
+      if (h < bh) { bh = h; best = [b.pu, b.pv]; }
+    }
+    [b.pu, b.pv] = best; }
+  for (let it = 0; it < 60; it++) {
+    b.pw = supBed(b, b.pw + 0.01);
+    if (!SJ) return;                                   // lying on the bed floor
+    // resting on another stone: try a few steps outwards and take the lowest one
+    const du = b.pu - SJ.pu, dv = b.pv - SJ.pv, d = Math.hypot(du, dv);
+    const a0 = d < 1e-4 ? Math.random() * 6.283 : Math.atan2(dv, du);
+    const pu = b.pu, pv = b.pv, pw = b.pw;
+    let best = null, bh = pw - 0.005;
+    for (const da of [0, 0.8, -0.8, 1.6, -1.6, 2.4, -2.4]) {
+      b.pu = pu + Math.cos(a0 + da) * BR * 0.7; b.pv = pv + Math.sin(a0 + da) * BR * 0.7; clampBed(b);
+      const h = supBed(b, pw + 0.01);
+      if (h < bh) { bh = h; best = [b.pu, b.pv]; }
+    }
+    if (!best) { b.pu = pu; b.pv = pv; b.pw = pw; return; }
+    [b.pu, b.pv] = best;
+  }
+  b.pw = supBed(b, b.pw + 0.01);
+}
+function bedToWorld(pu, pv, pw) {
+  const m = truck, c = Math.cos(m.h), s = Math.sin(m.h), ct = Math.cos(m.tilt), st = Math.sin(m.tilt);
+  const u = BED_HU + pu * ct - pw * st, w = BED_HW + pu * st + pw * ct;
+  return [m.x + u * c - pv * s, m.y + u * s + pv * c, w];
+}
+
+/* ---------- boulders and the crusher hopper ---------- */
+function inHopper(x, y, z) {
+  if (z > 2.7 || z < 0.9) return false;
+  const c = Math.cos(CR.h), s = Math.sin(CR.h), dx = x - CR.x, dy = y - CR.y, u = dx * c + dy * s, v = -dx * s + dy * c;
+  return u > -3.0 && u < -1.1 && Math.abs(v) < 1.02;
+}
+function crushRock() {
+  CR.burst += 45; CR.shake = 1; crunch();
+  const hp = crLocal(-2.1, 0, 2.0);
+  for (let i = 0; i < 18; i++) {
+    const a = Math.random() * 6.283, sp = 0.3 + Math.random() * 0.8;
+    sparks.push({ x: hp[0], y: hp[1], z: 2.0, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, vz: 0.8 + Math.random() * 1.4, life: 0.9 + Math.random() * 0.7, c: 4 + (i & 1) });
+  }
+}
+
+/* ---------- update ---------- */
+let camX = 0, camY = 0, camInit = false, time = 0, holeTimer = 0, sparks = [], smoke = [];
+function update(dt) {
+  time += dt;
+  gridBuild();
+  for (const m of machines) drive(m, dt, m === active);
+
+  // loader arms and bucket
+  const L = loader, a0 = L.alpha, b0 = L.beta, t0 = truck.tilt;
+  L.alpha = approach(L.alpha, ARM[L.state], 0.8 * dt);
+  L.beta = approach(L.beta, BKT[L.state], 1.4 * dt);
+  truck.tilt = approach(truck.tilt, TILT[truck.state], 0.55 * dt);
+  const E = exc, tgt = EXP[E.state];
+  let tm = 0;
+  for (let i = 0; i < 3; i++) tm = Math.max(tm, Math.abs(tgt[i] - E.j[i]) / EX_RATE[i]);
+  if (tm > 1e-4) for (let i = 0; i < 3; i++) E.j[i] = approach(E.j[i], tgt[i], Math.abs(tgt[i] - E.j[i]) / tm * dt);
+  E.tm = tm;
+  const moving = Math.abs(L.alpha - a0) + Math.abs(L.beta - b0) + Math.abs(truck.tilt - t0) > 1e-4 || tm > 1e-3 || E.swung;
+
+  // pedal released on the truck or loader: air-brake hiss
+  // (the brake has just finished when the machine has come to a stop after the pedal was released)
+  if (keys.up || keys.down) { pedalT += dt; if (pedalT > 0.25) braked = true; }
+  if ((active === loader || active === truck) && braked && !keys.up && !keys.down && Math.abs(active.speed) < 0.03) { hiss(); braked = false; }
+  if (active !== lastActive) { braked = false; lastActive = active; }
+  if (!keys.up && !keys.down) pedalT = 0;
+
+  // sounds
+  if (AC) {
+    const sp = Math.abs(active.speed);
+    setG(engG, 0.05 + 0.05 * sp + (moving ? 0.03 : 0));
+    engO.frequency.setTargetAtTime((active === truck ? 38 : active === exc ? 41 : 44) + sp * 22 + (moving ? 10 : 0), AC.currentTime, 0.1);
+    setG(hydG, moving ? 0.035 : 0);
+    const m = active;
+    if (m.speed < -0.03 || (keys.down && m.speed < 0.2)) { m.beep += dt; setG(beepG, (m.beep % 0.6) < 0.3 ? 0.0035 : 0); }
+    else { m.beep = 0; setG(beepG, 0); }
+  }
+
+  const LF = { x: L.x, y: L.y, h: L.h + L.steer };          // front frame carries arms and bucket
+  const c = Math.cos(LF.h), s = Math.sin(LF.h);
+  const Tu = 0.35 + 1.6 * Math.cos(L.alpha), Tw = 1.0 + 1.6 * Math.sin(L.alpha);
+  const cb = Math.cos(L.beta), sb = Math.sin(L.beta);
+  const bw = (p, q, v) => { const u = Tu + p * cb - q * sb, w = Tw + p * sb + q * cb; return [L.x + u * c - v * s, L.y + u * s + v * c, w]; };
+
+  // balls riding in the bucket
+  for (let i = 0; i < SLOTS.length; i++) {
+    const b = L.slots[i]; if (!b) continue;
+    const t = bw(...SLOTS[i]);
+    if (b.lt < 1) { b.lt = Math.min(1, b.lt + dt * 7); const k = b.lt;
+      b.x = b.sx + (t[0] - b.sx) * k; b.y = b.sy + (t[1] - b.sy) * k; b.z = b.sz + (t[2] - b.sz) * k; }
+    else { b.x = t[0]; b.y = t[1]; b.z = t[2]; }
+  }
+  // tipping the bucket: dirt falls out a couple at a time
+  if (L.beta < -0.55) {
+    let rel = 0;
+    for (let i = SLOTS.length - 1; i >= 0 && rel < 2; i--) {
+      const b = L.slots[i]; if (!b) continue;
+      L.slots[i] = null; rel++;
+      b.st = 'fall'; b.vx = c * 0.9 + (Math.random() - 0.5) * 0.4; b.vy = s * 0.9 + (Math.random() - 0.5) * 0.4; b.vz = -0.3;
+    }
+  }
+
+  // boulders riding in the loader bucket, released one at a time when it tips
+  for (let i = 0; i < 2; i++) {
+    const r = L.rk[i]; if (!r) continue;
+    const t = bw(0.4, -0.32 + RR - 0.02, i ? 0.42 : -0.42);
+    if (r.lt < 1) { r.lt = Math.min(1, r.lt + dt * 4); const k = r.lt;
+      r.x = r.sx + (t[0] - r.sx) * k; r.y = r.sy + (t[1] - r.sy) * k; r.z = r.sz + (t[2] - r.sz) * k; }
+    else { r.x = t[0]; r.y = t[1]; r.z = t[2]; }
+  }
+  L.rkT -= dt;
+  if (L.beta < -0.55 && L.rkT <= 0) {
+    const i = L.rk[0] ? 0 : L.rk[1] ? 1 : -1;
+    if (i >= 0) {
+      const r = L.rk[i]; L.rk[i] = null; L.rkT = 0.3;
+      r.st = 'fall'; r.vx = c * 0.8 + (Math.random() - 0.5) * 0.3; r.vy = s * 0.8 + (Math.random() - 0.5) * 0.3; r.vz = -0.3;
+    }
+  }
+
+  // excavator bucket: scoop, carry, dump
+  {
+    const G = excGeo(E), ec = Math.cos(E.h + E.swing), es = Math.sin(E.h + E.swing);
+    for (let i = 0; i < EXSLOTS.length; i++) {
+      const b = E.slots[i]; if (!b) continue;
+      const t = G.loc(...EXSLOTS[i]);
+      if (b.lt < 1) { b.lt = Math.min(1, b.lt + dt * 6); const k = b.lt;
+        b.x = b.sx + (t[0] - b.sx) * k; b.y = b.sy + (t[1] - b.sy) * k; b.z = b.sz + (t[2] - b.sz) * k; }
+      else { b.x = t[0]; b.y = t[1]; b.z = t[2]; }
+    }
+    if (G.n[1] < -0.3) {                       // opening faces down: dirt pours out
+      let rel = 0;
+      for (let i = EXSLOTS.length - 1; i >= 0 && rel < 2; i--) {
+        const b = E.slots[i]; if (!b) continue;
+        E.slots[i] = null; rel++;
+        b.st = 'fall'; b.vx = ec * 0.5 + (Math.random() - 0.5) * 0.4; b.vy = es * 0.5 + (Math.random() - 0.5) * 0.4; b.vz = -0.4;
+      }
+    }
+    if (E.rock) {                              // a boulder in the bucket
+      const r = E.rock, t = G.loc(0.3, 0.2, 0);
+      if (r.lt < 1) { r.lt = Math.min(1, r.lt + dt * 4); const k = r.lt;
+        r.x = r.sx + (t[0] - r.sx) * k; r.y = r.sy + (t[1] - r.sy) * k; r.z = r.sz + (t[2] - r.sz) * k; }
+      else { r.x = t[0]; r.y = t[1]; r.z = t[2]; }
+      if (G.n[1] < -0.3) { E.rock = null; r.st = 'fall'; r.vx = ec * 0.5 + (Math.random() - 0.5) * 0.3; r.vy = es * 0.5 + (Math.random() - 0.5) * 0.3; r.vz = -0.4; }
+    }
+    if (E.state === 2 && tm > 0.01 && !E.rock) {
+      const tip = G.loc(EX_BL, 0.05, 0), mid = G.loc(0.3, 0.12, 0);
+      if (tip[2] < 1.0) for (const r of rocks) {
+        if (r.st !== 'rest') continue;
+        if (Math.min(Math.hypot(r.x - tip[0], r.y - tip[1], r.z - tip[2]), Math.hypot(r.x - mid[0], r.y - mid[1], r.z - mid[2])) > 0.62) continue;
+        E.rock = r; r.st = 'ebkt'; r.lt = 0; r.sx = r.x; r.sy = r.y; r.sz = r.z; plop(); break;
+      }
+    }
+    if (E.state === 2 && tm > 0.01) {          // scooping sweep picks up dirt near the teeth
+      const tip = G.loc(EX_BL, 0.05, 0), mid = G.loc(0.3, 0.12, 0);
+      if (tip[2] < 1.0) for (const b of balls) {
+        if (b.st !== 'rest') continue;
+        const d1 = Math.hypot(b.x - tip[0], b.y - tip[1], b.z - tip[2]), d2 = Math.hypot(b.x - mid[0], b.y - mid[1], b.z - mid[2]);
+        if (Math.min(d1, d2) > 0.45) continue;
+        const slot = E.slots.indexOf(null); if (slot < 0) break;
+        E.slots[slot] = b; b.st = 'ebkt'; b.lt = 0; b.sx = b.x; b.sy = b.y; b.sz = b.z; plop();
+      }
+    }
+    if (E.state === 4 && tm < 1e-3) {         // after dumping, go back to the start pose
+      E.wait += dt;
+      if (E.wait > 0.5 && !E.slots.some(Boolean)) { E.state = 0; E.wait = 0; }
+    } else E.wait = 0;
+  }
+
+  // crusher: new gravel rides up the conveyor whenever the pile below gets small
+  {
+    CR.belt = (CR.belt + dt * 1.8) % 0.45;
+    CR.timer += dt;
+    CR.shake = Math.max(0, CR.shake - dt * 1.2); if (CR.burst > 0) CR.shake = Math.max(CR.shake, 0.4);
+    if (CR.timer > 0.15) {
+      CR.timer = 0;
+      let n = 0;
+      for (const b of balls) if (b.st === 'belt' || (b.st === 'rest' && Math.hypot(b.x - CR_DROP[0], b.y - CR_DROP[1]) < 1.8)) n++;
+      const mk = () => balls.push({ st: 'belt', t: 0, side: (Math.random() - 0.5) * 0.36, v: 3 + (balls.length % 2), x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0 });
+      if (CR.burst > 0 && balls.length < 800) { for (let i = 0; i < 3 && CR.burst > 0; i++) { mk(); CR.burst--; } }   // a crushed boulder: lots of gravel
+      else if (n < 110 && balls.length < 800) mk();
+    }
+    const cc = Math.cos(CR.h), cs = Math.sin(CR.h);
+    for (const b of balls) if (b.st === 'belt') {
+      b.t += dt * 1.8 / CR_LEN;
+      const d = b.t * CR_LEN, off = 0.1 + BR;
+      [b.x, b.y, b.z] = crLocal(CR_B0[0] + CR_DU * d - CR_DW * off, b.side, CR_B0[2] + CR_DW * d + CR_DU * off);
+      if (b.t >= 1) { b.st = 'fall'; b.vx = cc * 0.8 + (Math.random() - 0.5) * 0.3; b.vy = cs * 0.8 + (Math.random() - 0.5) * 0.3; b.vz = 0.4; }
+    }
+  }
+
+  // dirt on the truck bed: slides back and pours out when the bed is tipped
+  {
+    const T = truck, slide = T.tilt > 0.3 ? 1.8 * (Math.sin(T.tilt) - 0.27) * dt : 0;
+    const tc = Math.cos(T.h), ts = Math.sin(T.h);
+    for (let i = T.bed.length - 1; i >= 0; i--) {
+      const b = T.bed[i];
+      b.pu -= slide * (0.85 + (b.v * 0.1));
+      const p = bedToWorld(b.pu, b.pv, b.pw);
+      b.x = p[0]; b.y = p[1]; b.z = p[2];
+      if (b.pu < 0.02) {
+        T.bed.splice(i, 1);
+        b.st = 'fall'; b.vx = -tc * 0.8 + (Math.random() - 0.5) * 0.4; b.vy = -ts * 0.8 + (Math.random() - 0.5) * 0.4; b.vz = -0.2;
+      }
+    }
+  }
+
+  // scooping and pushing
+  const canScoop = L.state === 0 && Math.abs(L.alpha - ARM[0]) < 0.04 && Math.abs(L.beta) < 0.05 && L.speed > 0.05;
+  const bucketLow = Tw < 0.9;
+  const push = (m, b, u0, u1, vm, lu, lv) => {
+    const mc = Math.cos(m.h), ms = Math.sin(m.h);
+    const pf = u1 - lu, pb = lu - u0, pl = vm - lv, pr = lv + vm, mn = Math.min(pf, pb, pl, pr);
+    if (mn === pf) lu = u1 + 0.02; else if (mn === pb) lu = u0 - 0.02; else if (mn === pl) lv = vm + 0.02; else lv = -vm - 0.02;
+    b.x = m.x + lu * mc - lv * ms; b.y = m.y + lu * ms + lv * mc; b.st = 'fall'; b.vx = b.vy = b.vz = 0;
+  };
+  const tc = Math.cos(truck.h), ts = Math.sin(truck.h);
+  const bodies = [truck, exc, CR, { x: L.x, y: L.y, h: L.h, rect: [-1.7, 0.0, 0.88] }];
+  for (const b of balls) {
+    if (b.st !== 'rest' && b.st !== 'fall') continue;
+    if (b.z < 1.25) {
+      const dx = b.x - L.x, dy = b.y - L.y, lu = dx * c + dy * s, lv = -dx * s + dy * c;
+      if (bucketLow && lu > Tu - 0.05 && lu < Tu + 0.85 && Math.abs(lv) < 0.84 && b.z < Tw + 0.45) {
+        const slot = canScoop && b.st === 'rest' ? L.slots.indexOf(null) : -1;
+        if (slot >= 0) { L.slots[slot] = b; b.st = 'bkt'; b.lt = 0; b.sx = b.x; b.sy = b.y; b.sz = b.z; plop(); continue; }
+        if (Math.abs(L.speed) > 0.03) push(LF, b, Tu - 0.05, Tu + 0.85, 0.84, lu, lv);
+        continue;
+      }
+      if (lu > -0.05 && lu < 1.3 && Math.abs(lv) < 0.9) { push(LF, b, -0.05, 1.3, 0.9, lu, lv); continue; }
+    }
+    if (b.z < 0.95) for (const m of bodies) {
+      const mc = Math.cos(m.h), ms = Math.sin(m.h), dx = b.x - m.x, dy = b.y - m.y, lu = dx * mc + dy * ms, lv = -dx * ms + dy * mc;
+      const [u0, u1, vm] = m.rect;
+      if (lu > u0 - 0.05 && lu < u1 + 0.05 && Math.abs(lv) < vm + 0.05) { push(m, b, u0 - 0.05, u1 + 0.05, vm + 0.05, lu, lv); break; }
+    }
+  }
+
+  // boulders: scooped by the loader, pushed aside by machine bodies, dropped into the hopper
+  const pushRock = (m, r, u0, u1, vm, lu, lv) => {
+    const mc = Math.cos(m.h), ms = Math.sin(m.h);
+    const pf = u1 - lu, pb = lu - u0, pl = vm - lv, pr = lv + vm, mn = Math.min(pf, pb, pl, pr);
+    if (mn === pf) lu = u1 + 0.02; else if (mn === pb) lu = u0 - 0.02; else if (mn === pl) lv = vm + 0.02; else lv = -vm - 0.02;
+    r.x = m.x + lu * mc - lv * ms; r.y = m.y + lu * ms + lv * mc;
+  };
+  for (const r of rocks) {
+    if ((r.st !== 'rest' && r.st !== 'fall') || r.z > 1.3) continue;
+    const dx = r.x - L.x, dy = r.y - L.y, lu = dx * c + dy * s, lv = -dx * s + dy * c;
+    if (bucketLow && lu > Tu - 0.05 && lu < Tu + 0.95 && Math.abs(lv) < 0.94 && r.z < Tw + 0.7) {
+      const slot = canScoop && r.st === 'rest' ? L.rk.indexOf(null) : -1;
+      if (slot >= 0) { L.rk[slot] = r; r.st = 'lbkt'; r.lt = 0; r.sx = r.x; r.sy = r.y; r.sz = r.z; plop(); continue; }
+      if (Math.abs(L.speed) > 0.03) pushRock(LF, r, Tu - 0.05, Tu + 0.95, 0.94, lu, lv);
+      continue;
+    }
+    if (lu > -0.05 - RR && lu < 1.3 + RR && Math.abs(lv) < 0.9 + RR) { pushRock(LF, r, -0.05 - RR, 1.3 + RR, 0.9 + RR, lu, lv); continue; }
+    for (const m of bodies) {
+      const mc = Math.cos(m.h), ms = Math.sin(m.h), ex = r.x - m.x, ey = r.y - m.y, mu = ex * mc + ey * ms, mv = -ex * ms + ey * mc;
+      const [u0, u1, vm] = m.rect;
+      if (mu > u0 - RR && mu < u1 + RR && Math.abs(mv) < vm + RR) { pushRock(m, r, u0 - RR, u1 + RR, vm + RR, mu, mv); break; }
+    }
+  }
+  for (const r of rocks) if (r.st === 'fall') {
+    r.vz -= 9 * dt; r.x += r.vx * dt; r.y += r.vy * dt; r.z += r.vz * dt;
+    r.x = Math.max(1, Math.min(M - 1, r.x)); r.y = Math.max(1, Math.min(M - 1, r.y));
+    if (inHopper(r.x, r.y, r.z)) { r.dead = true; crushRock(); continue; }
+    if (r.z <= RR) { const imp = -r.vz; r.z = RR; r.st = 'rest'; r.vx = r.vy = r.vz = 0; thud(Math.min(1, 0.4 + imp / 5)); }
+  }
+  if (rocks.some(r => r.dead)) rocks = rocks.filter(r => !r.dead);
+  for (let i = 0; i < rocks.length; i++) {           // resting boulders keep clear of open holes and of each other
+    const r = rocks[i]; if (r.st !== 'rest') continue;
+    for (const H of HOLES) if (!H.done) {
+      const hx = r.x - H.x, hy = r.y - H.y, d = Math.hypot(hx, hy), lim = H.r + RR * 0.6;
+      if (d < lim) { const k = d < 1e-4 ? 1 : lim / d; r.x = H.x + (d < 1e-4 ? lim : hx * k); r.y = H.y + (d < 1e-4 ? 0 : hy * k); }
+    }
+    for (let j = i + 1; j < rocks.length; j++) {
+      const o = rocks[j]; if (o.st !== 'rest') continue;
+      const ox = o.x - r.x, oy = o.y - r.y, d = Math.hypot(ox, oy), lim = RR * 1.96;
+      if (d < lim && d > 1e-4) { const k = (lim - d) / 2 / d; r.x -= ox * k; r.y -= oy * k; o.x += ox * k; o.y += oy * k; }
+    }
+  }
+
+  // falling and settling (on the ground or into the truck bed)
+  for (const b of balls) {
+    if (b.st === 'fall') {
+      b.vz -= 9 * dt; b.x += b.vx * dt; b.y += b.vy * dt; b.z += b.vz * dt;
+      b.x = Math.max(1, Math.min(M - 1, b.x)); b.y = Math.max(1, Math.min(M - 1, b.y));
+      if (truck.tilt < 0.12 && b.z > BED_HW + 0.05) {
+        const dx = b.x - truck.x, dy = b.y - truck.y, lu = dx * tc + dy * ts, lv = -dx * ts + dy * tc;
+        const pu = lu - BED_HU, pv = lv;
+        if (pu > 0.02 && pu < BED_LEN && Math.abs(pv) < BED_V + 0.12) {
+          b.pu = pu; b.pv = pv; b.pw = b.z - BED_HW;
+          clampBed(b);
+          const h = supBed(b, b.pw + 0.1);
+          if (b.pw <= h) {
+            const imp = -b.vz; settleBed(b); b.st = 'bed'; b.vx = b.vy = b.vz = 0; truck.bed.push(b);
+            if (imp > 1.5) thud(Math.min(1, imp / 5));
+          }
+          continue;
+        }
+      }
+      const h = sup(b, b.z + 0.1);
+      if (b.z <= h) { const imp = -b.vz; settle(b); b.st = 'rest'; gridAdd(b); b.vx = b.vy = b.vz = 0; if (imp > 2) thud(Math.min(1, imp / 6)); }
+    } else if (b.st === 'rest') {
+      if (sup(b, b.z - 0.02) < b.z - 0.03) { b.st = 'fall'; b.vz = 0; }
+    }
+  }
+
+  // holes: count the gravel inside, close a hole when it is full
+  holeTimer += dt;
+  if (holeTimer > 0.4) {
+    holeTimer = 0;
+    for (const H of HOLES) if (!H.done) {
+      let n = 0;
+      for (const b of balls) if (b.st === 'rest' && Math.hypot(b.x - H.x, b.y - H.y) < H.r) n++;
+      if (n >= H.cap) {
+        H.done = true; H.t = time;
+        balls = balls.filter(b => !(b.st === 'rest' && Math.hypot(b.x - H.x, b.y - H.y) < H.r + 0.05));
+        for (let i = 0; i < (H.road ? 22 : 40); i++) {
+          const a = Math.random() * 6.283, sp = 0.6 + Math.random() * 1.4;
+          sparks.push({ x: H.x, y: H.y, z: 0.2, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, vz: 2 + Math.random() * 2.5, life: 1 + Math.random() * 0.6, c: i % 4 });
+        }
+        jingle(H.road && ROADHOLES.every(r => r.done));
+      }
+    }
+  }
+  // exhaust smoke: a little when idling, more when driving, most while the machine works
+  const exhaust = [
+    [loader, (u, v) => { const c = Math.cos(L.h), s = Math.sin(L.h); return [L.x + u * c - v * s, L.y + u * s + v * c]; }, -1.29, 0.28, 1.42,
+      Math.abs(L.alpha - ARM[L.state]) > 0.02 || Math.abs(L.beta - BKT[L.state]) > 0.02],
+    [truck, (u, v) => { const c = Math.cos(truck.h), s = Math.sin(truck.h); return [truck.x + u * c - v * s, truck.y + u * s + v * c]; }, -2.4, 0.62, 0.38,
+      Math.abs(truck.tilt - TILT[truck.state]) > 0.02],
+    [exc, (u, v) => { const a = exc.h + exc.swing, c = Math.cos(a), s = Math.sin(a); return [exc.x + u * c - v * s, exc.y + u * s + v * c]; }, -0.94, -0.54, 2.04,
+      exc.tm > 1e-3 || exc.swung],
+  ];
+  for (const [m, tf, u, v, w, working] of exhaust) {
+    const act = m === active, drv = Math.abs(m.speed) > 0.1;
+    const rate = act ? (working ? 9 : drv ? 6 : 1.6) : 0.6, big = act && (working || drv);
+    m.smk = (m.smk || 0) + rate * dt;
+    while (m.smk >= 1 && smoke.length < 160) {
+      m.smk -= 1; const [x, y] = tf(u, v);
+      smoke.push({ x, y, z: w, vx: (Math.random() - 0.5) * 0.25 + 0.12, vy: (Math.random() - 0.5) * 0.25 - 0.08, vz: 0.45 + Math.random() * 0.35 + (big ? 0.2 : 0),
+        age: 0, life: 1.4 + Math.random() * 1.1, sz: big ? 4.5 : 3, a: big ? 0.85 : 0.6 });
+    }
+    if (m.smk >= 1) m.smk = 0;
+  }
+  for (let i = smoke.length - 1; i >= 0; i--) {
+    const k = smoke[i]; k.age += dt; k.x += k.vx * dt; k.y += k.vy * dt; k.z += k.vz * dt; k.vz *= 1 - 0.4 * dt;
+    if (k.age >= k.life) smoke.splice(i, 1);
+  }
+  for (let i = sparks.length - 1; i >= 0; i--) {
+    const k = sparks[i]; k.vz -= (k.c >= 4 ? 1.2 : 6) * dt; k.x += k.vx * dt; k.y += k.vy * dt; k.z = Math.max(0, k.z + k.vz * dt); k.life -= dt;
+    if (k.life <= 0) sparks.splice(i, 1);
+  }
+
+  // camera follows the machine being driven
+  const tx = GW / 2 + (active.y - active.x) * TW / 2, ty = (active.x + active.y) * TH / 2 - 18 + (isTouch ? IH * 0.1 : 0);
+  if (!camInit) { camX = tx; camY = ty; camInit = true; }
+  const k = Math.min(1, dt * 3.5); camX += (tx - camX) * k; camY += (ty - camY) * k;
+}
+
+/* ---------- rendering ---------- */
+let OX = 0, OY = 0;
+const LX = 0.22, LY = -0.48, LZ = 0.85;   // light from upper left
+const PJ = [0, 0];                         // jitter applied while the shaking crusher is drawn
+const P = p => [Math.round(OX + GW / 2 + (p[1] - p[0]) * TW / 2) + PJ[0], Math.round(OY + (p[0] + p[1]) * TH / 2 - p[2] * ZH) + PJ[1]];
+const depth = p => p[0] + p[1] + 0.8 * p[2];
+const vis = n => n[0] + n[1] + 1.2 * n[2] > 1e-6;
+function lit(rgb, n) {
+  const l = Math.hypot(n[0], n[1], n[2]) || 1, d = (n[0] * LX + n[1] * LY + n[2] * LZ) / l;
+  const k = Math.round((0.6 + 0.4 * Math.max(0, d)) * 10) / 10;
+  return `rgb(${rgb[0] * k | 0},${rgb[1] * k | 0},${rgb[2] * k | 0})`;
+}
+const add3 = (a, b, k = 1) => [a[0] + b[0] * k, a[1] + b[1] * k, a[2] + b[2] * k];
+const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+
+const COL = {
+  Y: [244, 184, 28], BK: [232, 166, 20], DK: [64, 64, 70], GL: [150, 214, 240], TIRE: [44, 43, 47], TIRE2: [60, 59, 64],
+  HUB: [80, 80, 86], CYL: [176, 178, 184], ORON: [255, 150, 30], OROFF: [170, 90, 24], EDGE: [96, 96, 102],
+  CAB: [62, 128, 214], BED: [226, 86, 44], CH: [72, 72, 80], LAMP: [255, 236, 160],
+  ORMID: [236, 128, 34], OR: [240, 122, 26], ORD: [178, 84, 20], TEETH: [120, 120, 126],
+  CRM: [226, 216, 184], CRM2: [200, 190, 158], DK2: [52, 54, 58], SIL: [204, 206, 210], BELT: [92, 94, 100], LBL: [226, 110, 50], ROCK: [118, 108, 96]
+};
+let beacons = [], lamps = [];
+function beaconState(m) {
+  if (m !== active && Object.getPrototypeOf(m) !== active) return { mode: 'steady' };      // parked machines keep a steady light
+  const t = (time + m.phase) % 6;
+  if (t < 3) { const f = t % 0.5; return { mode: 'flash', on: f < 0.1 || (f > 0.18 && f < 0.28) }; }
+  return { mode: 'rot', ang: (t - 3) * 8 };
+}
+
+/* drawing kit bound to one machine's pose (u forward, v left, w up) */
+function kit(m, parts, off = 0) {
+  const c = Math.cos(m.h), s = Math.sin(m.h);
+  const W = (u, v, w) => [m.x + u * c - v * s, m.y + u * s + v * c, w];
+  const Dv = (u, v, w) => [u * c - v * s, u * s + v * c, w];
+  function addBox(C, A, B, H, col, bias = 0) {
+    const polys = [];
+    for (const [N, Pv, Q] of [[A, B, H], [B, H, A], [H, A, B]]) for (const sg of [1, -1]) {
+      const n = [N[0] * sg, N[1] * sg, N[2] * sg];
+      if (!vis(n)) continue;
+      const F = add3(C, n);
+      polys.push({ pts: [add3(add3(F, Pv), Q), add3(add3(F, Pv), Q, -1), add3(add3(F, Pv, -1), Q, -1), add3(add3(F, Pv, -1), Q)].map(P), col: lit(col, n) });
+    }
+    parts.push({ k: depth(C) + bias + off, polys });
+  }
+  const box = (u0, u1, v0, v1, w0, w1, col, bias) =>
+    addBox(W((u0 + u1) / 2, (v0 + v1) / 2, (w0 + w1) / 2), Dv((u1 - u0) / 2, 0, 0), Dv(0, (v1 - v0) / 2, 0), [0, 0, (w1 - w0) / 2], col, bias);
+  function plate(pts, col, bias = 0, out = null) {
+    if (out && !vis(out)) return;                 // a decal that only exists on a face turned towards the viewer
+    let n = cross(add3(pts[1], pts[0], -1), add3(pts[2], pts[0], -1));
+    if (!vis(n)) n = [-n[0], -n[1], -n[2]];
+    const cen = pts.reduce((a, p) => add3(a, p, 1 / pts.length), [0, 0, 0]);
+    parts.push({ k: depth(cen) + bias + off, polys: [{ pts: pts.map(P), col: lit(col, n) }] });
+  }
+  // a beam between two local points (u,v,w) with half sizes in v and across
+  function beam(a, b, hv, hx, col) {
+    const half = [(b[0] - a[0]) / 2, 0, (b[2] - a[2]) / 2], l = Math.hypot(half[0], half[2]) || 1;
+    addBox(W((a[0] + b[0]) / 2, a[1], (a[2] + b[2]) / 2), Dv(half[0], 0, half[2]), Dv(0, hv, 0), Dv(-half[2] / l * hx, 0, half[0] / l * hx), col);
+  }
+  function wheel(u, v, st, side, R, hub) {
+    const hw = 0.17, n = 12;
+    const C = W(u, v, R), ax = Dv(-Math.sin(st), Math.cos(st), 0), f = Dv(Math.cos(st), Math.sin(st), 0);
+    const ring = (off, rad) => { const r = [];
+      for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2 - m.roll;
+        r.push(add3(add3(add3(C, ax, off), f, rad * Math.cos(a)), [0, 0, 1], rad * Math.sin(a))); }
+      return r; };
+    const out = ring(hw * side, R), inn = ring(-hw * side, R), polys = [];
+    for (let i = 0; i < n; i++) {
+      const j = (i + 1) % n, am = (i + 0.5) / n * Math.PI * 2 - m.roll;
+      const nr = add3([f[0] * Math.cos(am), f[1] * Math.cos(am), 0], [0, 0, 1], Math.sin(am));
+      if (vis(nr)) polys.push({ pts: [out[i], out[j], inn[j], inn[i]].map(P), col: lit(i % 2 ? COL.TIRE : COL.TIRE2, nr) });
+    }
+    const no = [ax[0] * side, ax[1] * side, 0], ni = [-no[0], -no[1], 0];
+    if (vis(ni)) polys.push({ pts: inn.map(P), col: lit(COL.TIRE, ni) });
+    if (vis(no)) {
+      polys.push({ pts: out.map(P), col: lit(COL.TIRE, no) });
+      polys.push({ pts: ring(hw * side * 1.05, R * 0.6).map(P), col: lit(hub, no) });
+      polys.push({ pts: ring(hw * side * 1.1, R * 0.2).map(P), col: lit(COL.HUB, no) });
+    }
+    parts.push({ k: depth(add3(C, ax, side * 0.2)) + off, polys });
+  }
+  function beacon(u, v, w) {
+    const bs = beaconState(m);
+    box(u - 0.08, u + 0.08, v - 0.08, v + 0.08, w, w + 0.15, bs.mode === 'flash' ? (bs.on ? COL.ORON : COL.OROFF) : bs.mode === 'rot' ? COL.ORMID : COL.ORON);
+    beacons.push(Object.assign({ p: W(u, v, w + 0.09) }, bs));
+  }
+  // forward-facing headlight with a pool of light on the ground ahead
+  function lamp(u, v, w, sc = 1, nobox = false) {
+    if (!nobox) box(u - 0.03, u + 0.03, v - 0.1, v + 0.1, w, w + 0.12, COL.LAMP, 0.03);
+    lamps.push({ p: W(u + 0.04, v, w + 0.06), g0: W(u + 0.2, v, 0), g1: W(u + 2.6 * sc, v + 0.75 * sc, 0), g2: W(u + 2.6 * sc, v - 0.75 * sc, 0) });
+  }
+  return { W, Dv, addBox, box, plate, beam, wheel, beacon, lamp };
+}
+
+
+function buildLoader(parts) {
+  const L = loader, F = Object.create(L);
+  F.h = L.h + L.steer;                                          // front frame turns at the centre joint
+  const R = kit(L, parts), { W, Dv, addBox, box, plate, beam, wheel, lamp } = kit(F, parts);
+  // rear frame: engine, cab, rear axle
+  R.wheel(-0.8, 0.72, 0, 1, L.R, COL.Y); R.wheel(-0.8, -0.72, 0, -1, L.R, COL.Y);
+  R.box(-1.55, -0.12, -0.58, 0.58, 0.38, 1.0, COL.Y);          // engine / rear frame
+  R.box(-1.62, -1.55, -0.45, 0.45, 0.5, 0.9, COL.DK);          // grille
+  const rev = L.speed < -0.03 || (active === L && keys.down && L.speed < 0.2);   // reversing: the rear triangle glows
+  R.plate([R.W(-1.635, -0.4, 0.55), R.W(-1.635, -0.1, 0.55), R.W(-1.635, -0.25, 0.78)], rev ? [255, 70, 60] : [232, 36, 40], 0.5, R.Dv(-1, 0, 0));
+  if (rev) lamps.push({ col: 'rgba(255,40,30,0.16)', dot: 'rgba(255,90,70,0.7)', r: 5, p: R.W(-1.65, -0.25, 0.64), g0: R.W(-1.7, -0.25, 0), g1: R.W(-3.6, 0.35, 0), g2: R.W(-3.6, -0.85, 0) });
+  R.box(-1.3, -0.3, 0.58, 0.92, 0.9, 0.98, COL.Y, 0.05);       // rear fenders
+  R.box(-1.3, -0.3, -0.92, -0.58, 0.9, 0.98, COL.Y, 0.05);
+  R.box(-1.35, -1.23, 0.22, 0.34, 1.0, 1.4, COL.DK);           // exhaust
+  R.box(-0.95, -0.05, -0.5, 0.5, 1.0, 1.2, COL.Y);             // cab
+  R.box(-0.9, -0.1, -0.47, 0.47, 1.2, 1.72, COL.GL);
+  R.box(-1.0, 0.0, -0.55, 0.55, 1.72, 1.84, COL.Y);
+  R.beacon(-0.5, 0, 1.84);
+  R.lamp(0.02, 0.38, 1.7); R.lamp(0.02, -0.38, 1.7);          // work lights on the cab roof
+  R.box(-0.2, 0.0, -0.22, 0.22, 0.45, 0.8, COL.DK);            // centre joint
+  // front frame: axle, arms, bucket
+  wheel(0.8, 0.72, 0, 1, L.R, COL.Y); wheel(0.8, -0.72, 0, -1, L.R, COL.Y);
+  box(0.0, 1.15, -0.42, 0.42, 0.4, 0.78, COL.Y);               // front frame
+  box(0.35, 1.25, 0.58, 0.92, 0.9, 0.98, COL.Y, 0.05);         // front fenders
+  box(0.35, 1.25, -0.92, -0.58, 0.9, 0.98, COL.Y, 0.05);
+  lamp(1.24, 0.78, 0.98); lamp(1.24, -0.78, 0.98);             // headlights on the fenders
+  for (const sg of [1, -1]) box(0.2, 0.5, sg * 0.42, sg * 0.66, 0.6, 1.08, COL.Y);   // arm towers
+
+  const ca = Math.cos(L.alpha), sa = Math.sin(L.alpha);
+  for (const sg of [1, -1]) {
+    beam([0.35, sg * 0.6, 1.0], [0.35 + ca * 1.72, sg * 0.6, 1.0 + sa * 1.72], 0.07, 0.1, COL.Y);     // lift arm
+    beam([0.95, sg * 0.43, 0.55], [0.35 + ca * 0.75, sg * 0.43, 1.0 + sa * 0.75], 0.05, 0.06, COL.CYL); // cylinder
+  }
+  addBox(W(0.35 + ca * 0.9, 0, 1.0 + sa * 0.9), Dv(ca * 0.09, 0, sa * 0.09), Dv(0, 0.56, 0), Dv(-sa * 0.09, 0, ca * 0.09), COL.Y);
+
+  const Tu = 0.35 + 1.6 * ca, Tw = 1.0 + 1.6 * sa, cb = Math.cos(L.beta), sb = Math.sin(L.beta);
+  const B = (p, q, v) => W(Tu + p * cb - q * sb, v, Tw + p * sb + q * cb);
+  const bv = 0.8, q0 = -0.32, q1 = 0.32;
+  plate([B(0, q0, -bv), B(0, q0, bv), B(0, q1, bv), B(0, q1, -bv)], COL.BK);
+  plate([B(0, q0, -bv), B(0, q0, bv), B(0.8, q0, bv), B(0.8, q0, -bv)], COL.BK, -0.02);
+  plate([B(0.74, q0 - 0.01, -bv), B(0.74, q0 - 0.01, bv), B(0.88, q0 - 0.03, bv), B(0.88, q0 - 0.03, -bv)], COL.EDGE, -0.01);
+  for (const sg of [1, -1]) plate([B(0, q0, sg * bv), B(0.8, q0, sg * bv), B(0.55, -0.02, sg * bv), B(0, q1, sg * bv)], COL.BK, 0.02);
+}
+
+function buildTruck(parts) {
+  const T = truck, { W, Dv, addBox, box, beam, wheel, beacon, lamp } = kit(T, parts);
+  for (const [u, v, st] of T.wheels) wheel(u, v, st ? T.steer : 0, v > 0 ? 1 : -1, T.R, COL.CYL);
+  box(-2.05, 1.2, -0.5, 0.5, 0.42, 0.88, COL.CH);               // chassis
+  box(-2.15, -2.05, -0.8, 0.8, 0.4, 0.55, COL.CH);              // rear bumper
+  box(-2.38, -2.12, 0.56, 0.68, 0.3, 0.42, COL.DK);             // tailpipe
+  box(1.15, 2.15, -0.9, 0.9, 0.5, 1.35, COL.CAB);               // cab
+  box(1.25, 2.02, -0.86, 0.86, 1.35, 1.88, COL.GL);
+  box(1.15, 2.08, -0.92, 0.92, 1.88, 2.0, COL.CAB);
+  box(2.15, 2.26, -0.86, 0.86, 0.42, 0.62, COL.DK);              // front bumper
+  lamp(2.18, 0.62, 0.8); lamp(2.18, -0.62, 0.8);               // headlights
+  box(1.95, 2.15, -0.2, 0.2, 0.62, 1.2, COL.DK, 0.01);          // grille
+  beacon(1.63, 0, 2.0);
+  box(1.0, 1.12, 0.62, 0.72, 0.9, 2.05, COL.DK);                // exhaust stack
+
+  // tipping bed, rotated around the rear hinge
+  const ct = Math.cos(T.tilt), st = Math.sin(T.tilt);
+  const BW = (pu, pv, pw) => W(BED_HU + pu * ct - pw * st, pv, BED_HW + pu * st + pw * ct);
+  const U = Dv(ct, 0, st), V = Dv(0, 1, 0), Wd = Dv(-st, 0, ct);
+  const bbox = (pu, pv, pw, hu, hv, hw, col, bias) => addBox(BW(pu, pv, pw), U.map(x => x * hu), V.map(x => x * hv), Wd.map(x => x * hw), col, bias);
+  bbox(BED_LEN / 2, 0, 0.025, BED_LEN / 2, BED_V + 0.02, 0.025, COL.BED, -0.05);   // floor
+  bbox(BED_LEN / 2, BED_V, 0.3, BED_LEN / 2, 0.03, 0.27, COL.BED);                // side walls
+  bbox(BED_LEN / 2, -BED_V, 0.3, BED_LEN / 2, 0.03, 0.27, COL.BED);
+  bbox(BED_LEN - 0.04, 0, 0.42, 0.04, BED_V + 0.02, 0.4, COL.BED);               // headboard
+  bbox(BED_LEN + 0.1, 0, 0.8, 0.14, 0.7, 0.025, COL.BED);                         // cab guard
+  bbox(0.04, 0, 0.12, 0.04, BED_V + 0.02, 0.1, COL.BED, 0.02);                    // low tail lip
+  if (T.tilt > 0.02) {                                                             // lift ram
+    const top = [BED_HU + 2.3 * ct - 0.0 * st, 0, BED_HW + 2.3 * st];
+    beam([0.7, 0, 0.8], top, 0.08, 0.08, COL.CYL);
+  }
+}
+
+function buildExc(parts) {
+  const E = exc, C = kit(E, parts, -0.7);                        // the undercarriage is always drawn before the turning upper part
+  const U = Object.create(E); U.h = E.h + E.swing;               // upper structure turns on the slewing ring
+  const { W, Dv, addBox, box, plate, beam, wheel, beacon, lamp } = kit(U, parts);
+  for (const [u, v, st] of E.wheels) C.wheel(u, v, st ? E.steer : 0, v > 0 ? 1 : -1, E.R, COL.OR);
+  C.box(-1.3, 1.25, -0.55, 0.55, 0.38, 0.82, COL.CH);            // undercarriage
+  C.box(-1.15, 1.1, -0.95, 0.95, 0.82, 0.9, COL.CH, 0.03);      // mudguards
+  C.box(1.25, 1.33, 0.3, 0.5, 0.46, 0.62, [255, 255, 240], 0.05);      // front lights of the undercarriage
+  C.box(1.25, 1.33, -0.5, -0.3, 0.46, 0.62, [255, 255, 240], 0.05);
+  C.lamp(1.33, 0.4, 0.5, 0.5, true); C.lamp(1.33, -0.4, 0.5, 0.5, true);   // small beams ahead of the undercarriage
+  const rev = E.speed < -0.03 || (active === E && keys.down && E.speed < 0.2);   // reversing: the triangle glows
+  C.plate([C.W(-1.32, -0.46, 0.45), C.W(-1.32, -0.14, 0.45), C.W(-1.32, -0.3, 0.68)], rev ? [255, 70, 60] : [232, 36, 40], 0.5, C.Dv(-1, 0, 0));
+  if (rev) lamps.push({ col: 'rgba(255,40,30,0.16)', dot: 'rgba(255,90,70,0.7)', r: 5, p: C.W(-1.34, -0.3, 0.54), g0: C.W(-1.4, -0.3, 0), g1: C.W(-3.4, 0.3, 0), g2: C.W(-3.4, -0.9, 0) });   // red warning triangle at the rear
+  C.box(-0.55, 0.55, -0.55, 0.55, 0.82, 0.9, COL.DK, 0.04);     // slewing ring
+  box(-1.4, 0.85, -0.85, 0.85, 0.9, 1.45, COL.OR);               // upper house
+  box(-1.6, -1.25, -0.85, 0.85, 0.9, 1.35, COL.ORD);             // counterweight
+  box(-1.35, -0.25, -0.85, 0.05, 1.45, 1.62, COL.OR);            // engine hood
+  box(-1.0, -0.88, -0.6, -0.48, 1.62, 2.0, COL.DK);              // exhaust
+  box(-0.15, 0.82, 0.12, 0.82, 1.45, 2.12, COL.GL);              // cab glass
+  box(-0.2, 0.86, 0.08, 0.86, 2.12, 2.24, COL.OR);               // cab roof
+  box(-0.2, -0.1, 0.08, 0.86, 1.45, 2.12, COL.OR);               // cab back post
+  beacon(0.3, 0.47, 2.24);
+  lamp(0.89, 0.3, 2.08); lamp(0.89, 0.7, 2.08);                 // cab roof lights
+  box(0.3, 0.95, EX_V - 0.22, EX_V + 0.22, 1.1, 1.62, COL.OR);   // boom foot
+  lamp(0.98, EX_V, 1.42);
+
+  const G = excGeo(E), [B, S] = E.j, v0 = EX_V;
+  const P0 = [EX_P0[0], v0, EX_P0[1]], P1 = [G.p1[0], v0, G.p1[1]], P2 = [G.p2[0], v0, G.p2[1]];
+  beam(P0, P1, 0.15, 0.14, COL.OR);                              // boom (puomi)
+  const back = [P1[0] - Math.cos(S) * 0.35, v0, P1[2] - Math.sin(S) * 0.35];
+  beam(back, P2, 0.1, 0.09, COL.OR);                             // stick (varsi)
+  for (const sg of [1, -1]) {                                    // boom cylinders
+    const a = [0.95, v0 + sg * 0.2, 1.05], b = [EX_P0[0] + Math.cos(B) * 1.0, v0 + sg * 0.2, EX_P0[1] + Math.sin(B) * 1.0 - 0.12];
+    beam(a, b, 0.05, 0.06, COL.CYL);
+  }
+  beam([EX_P0[0] + Math.cos(B) * 1.1, v0, EX_P0[1] + Math.sin(B) * 1.1 + 0.16], [back[0], v0, back[2] + 0.08], 0.05, 0.06, COL.CYL);   // stick cylinder
+  const sm = [P1[0] + Math.cos(S) * 0.25, v0, P1[2] + Math.sin(S) * 0.25 + 0.0];
+  beam([sm[0] - Math.sin(S) * 0.14, v0, sm[2] + Math.cos(S) * 0.14], [P2[0] - Math.sin(S) * 0.14, v0, P2[2] + Math.cos(S) * 0.14], 0.04, 0.05, COL.CYL); // bucket cylinder
+
+  // bucket (kauha): side plates, curved back and teeth
+  const bv = EX_BV, Lb = (p, q, v) => G.loc(p, q, v);
+  const prof = [[0, 0], [0.22, -0.11], [EX_BL, 0], [0.04, 0.4]];
+  for (const sg of [1, -1]) plate(prof.map(([p, q]) => Lb(p, q, sg * bv)), COL.OR, 0.02);
+  plate([Lb(0, 0, -bv), Lb(0, 0, bv), Lb(0.22, -0.11, bv), Lb(0.22, -0.11, -bv)], COL.OR);
+  plate([Lb(0.22, -0.11, -bv), Lb(0.22, -0.11, bv), Lb(EX_BL, 0, bv), Lb(EX_BL, 0, -bv)], COL.OR);
+  plate([Lb(0, 0, -bv), Lb(0, 0, bv), Lb(0.04, 0.4, bv), Lb(0.04, 0.4, -bv)], COL.ORD, -0.02);
+  for (const v of [-0.27, -0.09, 0.09, 0.27])
+    plate([Lb(EX_BL - 0.02, -0.01, v - 0.05), Lb(EX_BL - 0.02, -0.01, v + 0.05), Lb(EX_BL + 0.12, 0.03, v)], COL.TEETH, -0.01);
+}
+
+function buildCrusher(parts) {
+  const { W, box, plate, beam } = kit(CR, parts);
+  for (const sg of [1, -1]) {                                   // tracks
+    box(-2.3, 1.3, sg > 0 ? 0.46 : -0.88, sg > 0 ? 0.88 : -0.46, 0.02, 0.4, COL.TIRE);
+    for (let i = 0; i < 9; i++) box(-2.25 + i * 0.4, -2.05 + i * 0.4, sg > 0 ? 0.88 : -0.9, sg > 0 ? 0.9 : -0.88, 0.05, 0.37, COL.TIRE2, 0.01);
+  }
+  box(-2.6, 1.5, -0.56, 0.56, 0.4, 0.66, COL.DK2);             // main frame
+  box(-2.6, -1.4, -0.6, 0.6, 0.66, 1.28, COL.CRM2);            // hopper stand
+  // feed hopper, flared walls with rock inside
+  const hp = [[-2.75, -0.8, 1.28], [-1.3, -0.8, 1.28], [-1.3, 0.8, 1.28], [-2.75, 0.8, 1.28]];
+  const ht = [[-2.98, -1.02, 2.05], [-1.12, -1.02, 2.05], [-1.12, 1.02, 2.05], [-2.98, 1.02, 2.05]];
+  plate([W(-2.9, -0.95, 1.8), W(-1.2, -0.95, 1.8), W(-1.2, 0.95, 1.8), W(-2.9, 0.95, 1.8)], COL.ROCK, -0.05);
+  for (let i = 0; i < 4; i++) {
+    const j = (i + 1) % 4;
+    plate([W(...hp[i]), W(...hp[j]), W(...ht[j]), W(...ht[i])], COL.CRM);
+  }
+  box(-1.3, -0.15, -0.6, 0.6, 0.66, 1.95, COL.CRM);             // crusher box
+  box(-1.2, -0.25, -0.5, 0.5, 1.95, 2.0, COL.DK2);
+  box(-1.0, -0.4, 0.6, 0.62, 0.85, 1.0, COL.LBL, 0.02);      // orange name plate
+  box(-0.15, 1.35, -0.72, 0.72, 0.66, 1.75, COL.CRM);           // engine housing
+  box(0.15, 1.05, 0.72, 0.76, 0.85, 1.55, COL.DK2, 0.02);    // radiator grille
+  for (let i = 0; i < 5; i++) box(0.2, 1.0, 0.76, 0.78, 0.9 + i * 0.13, 0.95 + i * 0.13, COL.CRM2, 0.03);
+  for (const sg of [1, -1]) {                                   // railings on top
+    beam([-0.1, sg * 0.66, 2.1], [1.3, sg * 0.66, 2.1], 0.025, 0.025, COL.DK2);
+    for (const u of [-0.08, 0.6, 1.28]) box(u - 0.025, u + 0.025, sg * 0.66 - 0.025, sg * 0.66 + 0.025, 1.75, 2.1, COL.DK2);
+  }
+  box(-0.42, -0.34, -0.44, -0.36, 2.0, 3.0, COL.DK2);             // light mast
+  box(-0.47, -0.29, -0.49, -0.31, 3.0, 3.12, COL.SIL);
+  // conveyor: frame, moving belt with cleats, supports and head hood
+  const at = d => [CR_B0[0] + CR_DU * d, 0, CR_B0[2] + CR_DW * d];
+  const segs = 4;
+  for (let i = 0; i < segs; i++) {
+    const a = at(CR_LEN * i / segs), b = at(CR_LEN * (i + 1) / segs);
+    beam(a, b, 0.38, 0.08, COL.DK2);
+    const lift = (p, k) => [p[0] - CR_DW * k, p[1], p[2] + CR_DU * k];
+    beam(lift(a, 0.09), lift(b, 0.09), 0.3, 0.012, COL.BELT);
+    for (const sg of [1, -1]) beam([...lift(a, 0.16)].map((x, j) => j === 1 ? sg * 0.4 : x), [...lift(b, 0.16)].map((x, j) => j === 1 ? sg * 0.4 : x), 0.025, 0.05, COL.DK2);
+  }
+  for (let d = CR.belt; d < CR_LEN - 0.1; d += 0.45) {          // belt cleats sliding up
+    const p = at(d), k = 0.11;
+    box(p[0] - CR_DW * k - 0.03, p[0] - CR_DW * k + 0.03, -0.3, 0.3, p[2] + CR_DU * k - 0.01, p[2] + CR_DU * k + 0.02, COL.CH, 0.02);
+  }
+  for (const sg of [1, -1]) {
+    const u2 = 2.9, w2 = CR_B0[2] + (u2 - CR_B0[0]) * CR_DW / CR_DU;
+    beam([1.45, sg * 0.42, 0.62], [u2, sg * 0.42, w2 - 0.08], 0.04, 0.05, COL.DK2);       // lower strut
+    beam([1.2, sg * 0.5, 1.75], [3.4, sg * 0.5, w2 + 0.75], 0.03, 0.04, COL.DK2);         // upper frame
+  }
+  box(4.05, 4.65, -0.46, 0.46, 2.18, 2.62, COL.SIL);            // head hood
+  box(4.45, 4.62, -0.4, 0.4, 1.9, 2.18, COL.DK2);               // drop curtain
+}
+
+function drawShadow(m, u0, u1, vm) {
+  const c = Math.cos(m.h), s = Math.sin(m.h);
+  const sh = [[u0, -vm], [u1, -vm], [u1, vm], [u0, vm]].map(([u, v]) => P([m.x + u * c - v * s + 0.08, m.y + u * s + v * c - 0.12, 0]));
+  ctx.beginPath(); ctx.moveTo(sh[0][0], sh[0][1]);
+  for (let i = 1; i < 4; i++) ctx.lineTo(sh[i][0], sh[i][1]);
+  ctx.closePath(); ctx.fill();
+}
+
+function drawPointer(m) {
+  const bob = Math.round(Math.sin(time * 5) * 2);
+  const q = P([m.x, m.y, m.top + 0.55]);
+  const x = q[0], y = q[1] + bob;
+  ctx.fillStyle = '#2a2420';
+  for (let r = 0; r < 6; r++) ctx.fillRect(x - 6 + r, y + r - 1, 13 - 2 * r, 1);
+  ctx.fillRect(x - 3, y - 6, 7, 6);
+  ctx.fillStyle = '#ffd866';
+  for (let r = 0; r < 4; r++) ctx.fillRect(x - 4 + r, y + r, 9 - 2 * r, 1);
+  ctx.fillRect(x - 2, y - 5, 5, 5);
+}
+
+function render() {
+  ctx.fillStyle = '#6c8f3e'; ctx.fillRect(0, 0, IW, IH);
+  OX = Math.round(IW / 2 - camX); OY = Math.round(IH / 2 - camY);
+  ctx.drawImage(ground, OX, OY);
+  for (const H of HOLES) ctx.drawImage(H.done ? H.patch : H.spr, OX + H.bx, OY + H.by);
+  ctx.drawImage(tracks, OX, OY);
+
+  ctx.fillStyle = 'rgba(40,30,20,0.28)';
+  drawShadow(loader, -1.7, 0.05, 0.95);
+  drawShadow({ x: loader.x, y: loader.y, h: loader.h + loader.steer }, -0.05, Math.max(1.35, 0.35 + 1.6 * Math.cos(loader.alpha) + 0.6), 0.95);
+  drawShadow(CR, -2.85, 1.6, 1.05);
+  ctx.fillStyle = 'rgba(40,30,20,0.18)';
+  drawShadow(CR, 1.6, 4.7, 0.5);
+  ctx.fillStyle = 'rgba(40,30,20,0.28)';
+  drawShadow(truck, -2.15, 2.25, 1.0);
+  drawShadow(exc, -1.65, 1.3, 1.0);
+  if (active === exc) {                                   // dashed guide on the ground: where the bucket points
+    const a = exc.h + exc.swing, c = Math.cos(a), s = Math.sin(a), q0 = P([exc.x + c * 3.3, exc.y + s * 3.3, 0]), q1 = P([exc.x + c * 7.5, exc.y + s * 7.5, 0]);
+    ctx.save(); ctx.strokeStyle = 'rgba(255,250,225,0.9)'; ctx.lineWidth = 2; ctx.setLineDash([6, 6]);
+    ctx.beginPath(); ctx.moveTo(q0[0], q0[1]); ctx.lineTo(q1[0], q1[1]); ctx.stroke(); ctx.restore();
+  }
+  ctx.fillStyle = 'rgba(40,30,20,0.3)';
+  for (const b of balls) if (b.st === 'fall' && b.z > 0.4) { const q = P([b.x, b.y, 0]); ctx.fillRect(q[0] - 2, q[1] - 1, 5, 2); }
+  for (const r of rocks) if (r.st === 'rest' || r.st === 'fall') {
+    const q = P([r.x, r.y, 0]), k = r.st === 'rest' ? 1 : 0.7;
+    ctx.beginPath(); ctx.ellipse(q[0] + 1, q[1] + 2, 10 * k, 4.5 * k, 0, 0, 6.283); ctx.fill();
+  }
+
+  const parts = [];
+  beacons = []; lamps = [];
+  buildLoader(parts);
+  buildTruck(parts);
+  buildExc(parts);
+  PJ[1] = CR.shake > 0 ? Math.round(Math.sin(time * 70) * Math.min(1, CR.shake) * 1.4) : 0;
+  buildCrusher(parts);
+  PJ[1] = 0;
+  // headlight pools on the ground, under everything standing
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(255,236,170,0.07)';
+  for (const l of lamps) {
+    ctx.fillStyle = l.col || 'rgba(255,236,170,0.07)';
+    const a = P(l.g0), b = P(l.g1), c2 = P(l.g2);
+    ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.lineTo(c2[0], c2[1]); ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+  for (const b of balls) parts.push({ k: depth([b.x, b.y, b.z]) + 0.05, ball: b });
+  for (const r of rocks) parts.push({ k: depth([r.x, r.y, r.z]) + (r.st === 'lbkt' || r.st === 'ebkt' ? 0.45 : 0.05), rock: r });
+  for (const d of DECO) parts.push({ k: depth([d.p[0], d.p[1], 0.2]), deco: d });
+  parts.sort((a, b) => a.k - b.k);
+  ctx.lineWidth = 1; ctx.lineJoin = 'round';
+  for (const p of parts) {
+    if (p.rock) { const q = P([p.rock.x, p.rock.y, p.rock.z]); ctx.drawImage(ROCKSPR[p.rock.s], q[0] - 12, q[1] - 13); continue; }
+    if (p.deco) { const q = P([p.deco.p[0], p.deco.p[1], 0]); ctx.drawImage(p.deco.spr, q[0] - p.deco.ax, q[1] - p.deco.ay); continue; }
+    if (p.ball) {
+      const b = p.ball, q = P([b.x, b.y, b.z]);
+      if (q[0] > -10 && q[1] > -10 && q[0] < IW + 10 && q[1] < IH + 10) {
+        const H = b.z < BR - 0.01 ? holeAt(b.x, b.y) : null;
+        if (H) {                                    // the near rim hides gravel deep in a hole
+          ctx.save(); ctx.beginPath();
+          H.rim.forEach((r, i) => { const s2 = P(r); i ? ctx.lineTo(s2[0], s2[1]) : ctx.moveTo(s2[0], s2[1]); });
+          ctx.closePath(); ctx.clip(); ctx.drawImage(BALLSPR[b.v], q[0] - 3, q[1] - 3); ctx.restore();
+        } else ctx.drawImage(BALLSPR[b.v], q[0] - 3, q[1] - 3);
+      }
+      continue;
+    }
+    for (const pl of p.polys) {
+      const q = pl.pts; ctx.fillStyle = ctx.strokeStyle = pl.col;
+      ctx.beginPath(); ctx.moveTo(q[0][0], q[0][1]);
+      for (let i = 1; i < q.length; i++) ctx.lineTo(q[i][0], q[i][1]);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+  }
+  const SPC = ['#fff6b0', '#ffd866', '#ff9a3c', '#ffffff', '#d9d2c2', '#a89f8e'];
+  for (const k of sparks) { const q = P([k.x, k.y, k.z]), d = k.c >= 4; ctx.globalAlpha = d ? Math.min(1, k.life * 1.4) : 1; ctx.fillStyle = SPC[k.c]; ctx.fillRect(q[0] - 1, q[1] - 1, d ? 3 : 2, d ? 3 : 2); }
+  ctx.globalAlpha = 1;
+  // beacon light: flashing halo, then a rotating beam
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  const glow = (q, r, a) => { ctx.fillStyle = `rgba(255,160,40,${a})`; ctx.beginPath(); ctx.arc(q[0], q[1], r, 0, 6.283); ctx.fill(); };
+  for (const bc of beacons) {
+    const q = P(bc.p);
+    if (bc.mode === 'steady') { glow(q, 4, 0.3); continue; }
+    if (bc.mode === 'flash') { if (bc.on) { glow(q, 9, 0.25); glow(q, 5, 0.45); } continue; }
+    const a = bc.ang, Lr = 1.9, sp = 0.24, e1 = P([bc.p[0] + Math.cos(a - sp) * Lr, bc.p[1] + Math.sin(a - sp) * Lr, bc.p[2]]),
+      e2 = P([bc.p[0] + Math.cos(a + sp) * Lr, bc.p[1] + Math.sin(a + sp) * Lr, bc.p[2]]);
+    ctx.fillStyle = 'rgba(255,150,30,0.2)';
+    ctx.beginPath(); ctx.moveTo(q[0], q[1]); ctx.lineTo(e1[0], e1[1]); ctx.lineTo(e2[0], e2[1]); ctx.closePath(); ctx.fill();
+    glow(P([bc.p[0] + Math.cos(a) * 0.08, bc.p[1] + Math.sin(a) * 0.08, bc.p[2]]), 3, 0.6);
+  }
+  for (const l of lamps) {
+    const q = P(l.p);
+    ctx.fillStyle = l.dot || 'rgba(255,240,190,0.35)'; ctx.beginPath(); ctx.arc(q[0], q[1], l.r || 3, 0, 6.283); ctx.fill();
+  }
+  ctx.restore();
+  for (const k of smoke) {
+    const q = P([k.x, k.y, k.z]), f = k.age / k.life, sz = Math.round(k.sz + f * 9);
+    ctx.globalAlpha = k.a * (1 - f) * Math.min(1, k.age * 6); ctx.fillStyle = f < 0.5 ? '#16161a' : '#34343a';
+    ctx.fillRect(q[0] - (sz >> 1), q[1] - (sz >> 1), sz, sz);
+  }
+  ctx.globalAlpha = 1;
+  drawPointer(active);
+}
+
+/* ---------- input ---------- */
+const hint = document.getElementById('hint');
+let hinted = false;
+function firstInput() { audio(); if (!hinted && isTouch) { hinted = true; setTimeout(() => hint.classList.add('gone'), 4000); } }
+/* start screen: the first tap unlocks sound, so the engine is heard as soon as a machine can be driven */
+let started = false;
+const startEl = document.getElementById('start'), startBtn = document.getElementById('startbtn');
+function crank() {
+  if (!AC) return; const t = AC.currentTime;
+  const o = AC.createOscillator(); o.type = 'sawtooth';
+  o.frequency.setValueAtTime(18, t); o.frequency.linearRampToValueAtTime(34, t + 0.5); o.frequency.exponentialRampToValueAtTime(60, t + 0.9);
+  const f = AC.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 320;
+  const g = AC.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.16, t + 0.08);
+  g.gain.setValueAtTime(0.16, t + 0.75); g.gain.exponentialRampToValueAtTime(0.001, t + 1.2);
+  o.connect(f).connect(g).connect(master); o.start(t); o.stop(t + 1.25);
+}
+function startGame() {
+  if (started) return;
+  started = true; startEl.hidden = true;
+  firstInput(); crank();
+}
+startBtn.addEventListener('click', startGame);
+startBtn.focus();
+const KEYMAP = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down', Delete: 'swl', PageDown: 'swr' };
+addEventListener('keydown', e => {
+  if (!started) { if ([' ', 'Enter', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) || e.code === 'Space') { e.preventDefault(); startGame(); } return; }
+  if (KEYMAP[e.key]) { keys[KEYMAP[e.key]] = 1; e.preventDefault(); firstInput(); }
+  else if (e.code === 'Space' || e.key === ' ') { e.preventDefault(); firstInput(); if (!e.repeat) action(); }
+  else if (e.key === 'Tab' || e.key === 'Enter') { e.preventDefault(); firstInput(); if (!e.repeat) nextMachine(); }
+  else if (e.key === '1' || e.key === '2' || e.key === '3') { firstInput(); setActive(machines[+e.key - 1]); }
+});
+addEventListener('keyup', e => { if (KEYMAP[e.key]) { keys[KEYMAP[e.key]] = 0; e.preventDefault(); } });
+addEventListener('blur', () => { for (const k in keys) keys[k] = 0; });
+
+// tap or click a machine to drive it
+cv.addEventListener('pointerdown', e => {
+  firstInput();
+  const r = cv.getBoundingClientRect(), ix = (e.clientX - r.left) / r.width * IW, iy = (e.clientY - r.top) / r.height * IH;
+  let best = null, bd = 60;
+  for (const m of machines) {
+    const q = P([m.x, m.y, 1.0]), d = Math.hypot(q[0] - ix, q[1] - iy);
+    if (d < bd) { bd = d; best = m; }
+  }
+  if (best) setActive(best);
+});
+
+for (const el of document.querySelectorAll('.btn[data-k]')) {
+  const k = el.dataset.k;
+  const on = e => { e.preventDefault(); firstInput(); keys[k] = 1; el.classList.add('on'); try { el.setPointerCapture(e.pointerId); } catch (_) {} };
+  const off = () => { keys[k] = 0; el.classList.remove('on'); };
+  el.addEventListener('pointerdown', on);
+  el.addEventListener('pointerup', off); el.addEventListener('pointercancel', off); el.addEventListener('lostpointercapture', off);
+}
+mbtns.forEach((b, i) => {
+  b.addEventListener('pointerdown', e => { e.preventDefault(); firstInput(); setActive(machines[i]); b.classList.add('on'); });
+  for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(ev, () => b.classList.remove('on'));
+});
+const act = document.getElementById('act');
+act.addEventListener('pointerdown', e => { e.preventDefault(); firstInput(); action(); act.classList.add('on'); });
+for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) act.addEventListener(ev, () => act.classList.remove('on'));
+document.getElementById('reset').addEventListener('click', e => { e.currentTarget.blur(); reset(); });
+document.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('gesturestart', e => e.preventDefault());
+
+/* ---------- loop ---------- */
+reset();
+let last = performance.now();
+function frame(t) {
+  const dt = Math.min(0.05, Math.max(0, (t - last) / 1000)); last = t;
+  update(dt); render();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+})();
+</script>

@@ -1,0 +1,15 @@
+from playwright.sync_api import sync_playwright
+with sync_playwright() as p:
+    b=p.chromium.launch(); pg=b.new_page(viewport={'width':1100,'height':700})
+    errs=[]; pg.on('pageerror',lambda e:errs.append(str(e)))
+    pg.goto('file://'+__import__('os').path.abspath(__import__('os').path.join(__import__('os').path.dirname(__file__),'out','harness.html'))+''); pg.wait_for_timeout(500)
+    pg.evaluate("__kh.startGame()")
+    pg.evaluate("(()=>{const L=__kh.loader,r=__kh.rocks()[2];L.x=r.x+4;L.y=r.y;L.h=Math.PI;L.steer=0})()")
+    pg.wait_for_timeout(500)
+    pg.keyboard.down('ArrowUp'); pg.wait_for_timeout(3500); pg.keyboard.up('ArrowUp')
+    print('carry',pg.evaluate("__kh.loader.rk.map(r=>!!r)"), pg.evaluate("__kh.rocks().map(r=>r.st).join()"))
+    pg.keyboard.press('Space'); pg.wait_for_timeout(2500); pg.screenshot(path='tests/out/rk_load.png')
+    pg.keyboard.press('Space'); pg.wait_for_timeout(2500)
+    print('after dump',pg.evaluate("__kh.loader.rk.map(r=>!!r)"), pg.evaluate("__kh.rocks().map(r=>r.st).join()"), errs)
+    pg.evaluate("(()=>{const L=__kh.loader;L.x=17;L.y=36.8;L.h=-2.17;L.steer=0})()"); pg.keyboard.press('Space'); pg.wait_for_timeout(300)
+    b.close()
