@@ -3,6 +3,24 @@
 Taaperolle (3–4 v) tehty selainpeli: isometrinen pixel art -työmaa. **Pidä kaikki hyvin yksinkertaisena ja lapsiystävällisenä.**
 Käyttäjä (Esko) puhuu suomea – vastaa suomeksi, tiiviisti. UI-teksti on suomea.
 
+## Kaksi versiota
+- **v2 (nykyinen, julkaistaan itch.io:hon):** lähteet `src/`, rakennettu tiedosto `v2/index.html` (älä muokkaa sitä käsin). Kentät: 1 Tietyö (kuormaaja, kuorma-auto, kaivuri, murskain), 2 Mikkolan talvi (traktori, aura + takalinko; Halli, Lato, Navetta, Puoji, Talo, Kuivaaja). Mikkolan kesä (vihreä nurmi) on suunniteltu myöhemmin – älä tuhoa vihreää varianttia. Ohjaus: nuolet + välilyönti ohjaa kaikkia koneita.
+- **v1:** juuren `index.html` + alla oleva v1-kuvaus. Ei enää kehitetä, älä koske.
+
+## v2: kloonaus, rakennus, testit, julkaisu
+```
+git clone https://github.com/esep/konehomma && cd konehomma
+sh src/build.sh            # kokoaa src/ -> v2/index.html (lisää versiotekstin oikeaan alanurkkaan)
+```
+- **Lähteet (`src/`)**: `p1.html` (HTML+CSS, `__VERSION__`-paikka), `p2.js` (äänen apuja, hiss/crunch), `p3.js`, `p4.js` (ohjaus, moottoriäänet), `p5.js` (koneiden mallit), `p6m.js` (kartta, rakennukset, piha, katot), `p6.js` (traktori), `p7.js` (piirto, ohjepalkki), `mikroad.js` (tiet), `snd.js`/`snd_exc.js` (base64-äänet). `build.sh` liimaa ne järjestyksessä: mikroad+snd+snd_exc lisätään `p2.js`:n ensimmäisen rivin jälkeen, sitten p2,p3,p4,p5,p6m,p6,p7.
+- **Versio**: muuta `src/VERSION` (esim. `2.2`) aina kun julkaiset muutoksen; build lisää päivämäärän. Teksti näkyy pienellä oikeassa alakulmassa.
+- **Testit**: Playwright (Python, `/usr/bin/google-chrome`). `tests/v2/t34.py "[(wx,wy,suunta),...]"` käynnistää Mikkolan talven, siirtää traktorin kartta-koordinaatteihin ja tallentaa `o0.png…`; katso kuvat silmällä. Peli paljastaa `window.__game` (`startLevel('snow')`, `tractor`, `gX/gY` ym.). Muokkaa tiedostopolku osoittamaan `v2/index.html`:ään.
+- **Rakennusten muokkaus** (`p6m.js`): `HOUSES`-lista kartta-koordinaateissa (`r:[wx0,wy0,wx1,wy1]`); ovet/ikkunat/koristeet kartta-seinillä `w:'S'|'E'|…` (kartta-S = pelin E). Koristeen `c` on kartta-yksikkö, mutta `hw` peliyksikköä (kartta×0.184) – sekoittaminen venyttää viipaleita ja rikkoo seinän. `deco`-tyypit: `lamp`, `dart`, `board` (valkoinen lauta, `z`..`z1`/`'top'`). `gline` = vaakalauta kartta-itäseinällä, `glE` = kartta-eteläseinällä. Katot (Talo) rakennetaan `buildTaloRoof()`:ssa; laaksot: pääkaton itälappe päättyy laaksoon, poikkipäädyn lappeet ovat laakson ja harjan välissä.
+- **Julkaisu itch.io:hon (GitHub Actions)**: commitoi muutos (`src/` + rakennettu `v2/index.html`) ja pushaa `main`iin. `.github/workflows/itch.yml` ajaa butlerin ja työntää `v2/`-kansion kanavalle `walksonlegos/konehomma:html5` (secret `BUTLER_API_KEY` on repon Actions-secreteissä). Voi ajaa myös käsin Actions-välilehdeltä. Älä pushaa `main`iin ilman että build on ajettu ja kuvat tarkistettu. Claude-ympäristöstä itch.io ei ole tavoitettavissa, siksi julkaisu tehdään Actionilla.
+- **Claude-projekti ("Konehomma")**: päivitä myös `claude/konehomma-v2.html` (`project_write`, edellyttää ensin `project_read`) ja artifact; `claude/konehomma-ohje.md` on sama ohje projektin puolella.
+
+# v1
+
 ## Rakenne
 - `index.html` – koko peli yhdessä tiedostossa (HTML + CSS + JS, canvas). Ei riippuvuuksia; ainoa ulkoinen resurssi on Google Fonts (Pixelify Sans). Numeroille käytetään monospace-fonttia, koska Pixelifyn "2" näyttää peilatulta.
 - `tests/` – Playwright-testit (Python). `sh tests/make_harness.sh` rakentaa `tests/out/harness.html` (index.html + `window.__kh` -debugkahva ja syntaksitarkistus), sen jälkeen esim. `python3 tests/rk.py` (lohkareet + murskain), `rk2/3/4.py` (kaivurin ja kuormaajan poiminta), `exc_shots.py` (kaivurin käännön kuvakaappaukset). Kuvat menevät `tests/out/` (gitignore).

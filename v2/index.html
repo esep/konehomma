@@ -44,6 +44,7 @@ body.touch.exc .pad.sw,body.touch.snowmode .pad.sw{display:flex}
 .hint b{color:var(--yellow);font-weight:700}
 .hint b.num{font-family:ui-monospace,"Courier New",monospace}
 .hint.gone{opacity:0}
+.ver{position:fixed;right:6px;bottom:3px;font:9px/1 ui-monospace,"Courier New",monospace;color:rgba(42,36,32,.5);pointer-events:none;z-index:5}
 body.touch .hint{display:none}
 .reset{position:absolute;top:12px;right:max(12px,env(safe-area-inset-right,0px));width:40px;height:40px;padding:0;
   border:3px solid var(--ink);border-radius:6px;background:rgba(255,244,214,.75);display:grid;place-items:center;cursor:pointer}
@@ -128,6 +129,7 @@ body.snowmode .mpick{display:none}
     </div>
   </div>
   <div class="hint" id="hint"></div>
+  <div class="ver">v2.1 · 20.11.2026</div>
   <button class="reset menub" id="menubtn" aria-label="Valikko"><svg viewBox="0 0 10 10"><path d="M1 2H9V3.4H1ZM1 4.3H9V5.7H1ZM1 6.6H9V8H1Z"/></svg><i class="mk">M</i></button>
   <button class="reset" id="reset" aria-label="Aloita alusta"><svg viewBox="0 0 10 10"><path d="M5 1A4 4 0 1 0 9 5H7.4A2.4 2.4 0 1 1 5 2.6V4.2L7.6 1.8L5 -0.6Z"/></svg></button>
 </div>
