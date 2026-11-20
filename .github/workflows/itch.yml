@@ -1,0 +1,24 @@
+name: Julkaise itch.io:hon
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['v2/**', '.github/workflows/itch.yml']
+
+jobs:
+  butler:
+    runs-on: ubuntu-latest
+    env:
+      BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Asenna butler
+        run: |
+          curl -fsSL -o butler.zip https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default
+          unzip -q butler.zip -d butler-bin
+          chmod +x butler-bin/butler
+      - name: Tarkista avain
+        run: test -n "$BUTLER_API_KEY" || { echo "Secret BUTLER_API_KEY puuttuu"; exit 1; }
+      - name: Push
+        run: ./butler-bin/butler push v2 walksonlegos/konehomma:html5 --userversion "${GITHUB_SHA::7}"
