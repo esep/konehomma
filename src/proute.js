@@ -38,6 +38,11 @@ function routeBarSet() {
 
 function routeStep(dt) {
   if (RT.win >= 0) { celebStep(dt); return; }
+  if (RT.win === -2) {                              // reitti on valmis: nollaus vasta kun traktori on takaisin hallissa
+    const T = tractor;
+    if (T.x > gX(-92) && T.x < gX(-49) && T.y > gY(618) && T.y < gY(708)) routeReset();
+    return;
+  }
   const T = tractor, R2 = RT_R * RT_R;
   for (const s of RT.lines) for (const p of s) {
     if (p.d) continue;
@@ -72,15 +77,34 @@ function drawRoute() {
 
 /* ---------- ilotulitus ja peukku ---------- */
 const FW_COL = ['#ff4d4d', '#ffd23f', '#4dff88', '#4dd2ff', '#ff6ad5', '#ffffff', '#ff9a3c'];
-const THUMB_ROWS = ['.......##.......', '......#yy#......', '......#hy#......', '......#hy#......', '......#yy#......', '......#yy#......', '..#####yy#####..',
-  '.#yyyyyyyyyyyy#.', '.#hyyyyyyyyyyyo#', '.#yyyyyyyyyyyyo#', '.#yyyyyyyyyyyyo#', '.#oooooooooooo#.', '.#yyyyyyyyyyyo#.', '.#hyyyyyyyyyyo#.', '.#yyyyyyyyyyo#..', '..############..'];
+const THUMB_ROWS = [
+  '..........####..........',
+  '.........#ssss#.........',
+  '.........#wsyy#.........',
+  '.........#wsyy#.........',
+  '.........#wsyy#.........',
+  '.#####...#ssyy#.........',
+  '#ccccc#..#ssss#.........',
+  '#ccccc#..#ssss#.........',
+  '#bbbbb#..#ssss#########.',
+  '#bbbbb####ssssyyywwwyyy#',
+  '#bbbbbssssssssyyyyyyyyy#',
+  '#bbbbbssssssssssswwsss#.',
+  '#bbbbbsssssssssoosssss#.',
+  '#bbbbbssssssssssswwss#..',
+  '#dddddsssssssssoossss#..',
+  '#dddddssssssssssswws#...',
+  '#dddddoooooooosoosss#...',
+  '#dddddooooooooss####....',
+  '.###############........',
+  '........................'];
 const THUMB = (() => {
-  const c = document.createElement('canvas'); c.width = c.height = 16; const x = c.getContext('2d');
-  const col = { '#': '#2a2420', y: '#ffcf3f', h: '#fff1a8', o: '#e8a317' };
-  THUMB_ROWS.forEach((row, j) => { for (let i = 0; i < 16; i++) if (col[row[i]]) { x.fillStyle = col[row[i]]; x.fillRect(i, j, 1, 1); } });
+  const c = document.createElement('canvas'); c.width = 24; c.height = 20; const x = c.getContext('2d');
+  const col = { '#': '#1b1b6b', b: '#1196ea', c: '#36cdf5', d: '#2d72b5', s: '#ee8c64', o: '#ff6a1a', y: '#f4c042', w: '#fff8dc' };
+  THUMB_ROWS.forEach((row, j) => { for (let i = 0; i < 24; i++) if (col[row[i]]) { x.fillStyle = col[row[i]]; x.fillRect(i, j, 1, 1); } });
   return c;
 })();
-const RT_FW_END = 6.0, RT_WIN_END = 7.4;          // ilotulitteita tulee 6 s, sitten reitti nollataan uutta kierrosta varten
+const RT_FW_END = 6.0, RT_WIN_END = 7.4;          // ilotulitteita tulee 6 s; reitti pysyy vihreänä ja nollautuu vasta kun traktori ajaa takaisin Halliin
 
 function fwLaunch() {
   const ty = IH * (0.12 + Math.random() * 0.38);
@@ -112,7 +136,7 @@ function celebStep(dt) {
     if (s.age >= s.life) { RT.sparks.splice(i, 1); continue; }
     s.vx *= drag; s.vy = s.vy * drag + grav * dt; s.x += s.vx * dt; s.y += s.vy * dt;
   }
-  if (RT.win >= RT_WIN_END) routeReset();
+  if (RT.win >= RT_WIN_END) { RT.win = -2; RT.sparks.length = 0; RT.rockets.length = 0; }   // valmis-tila: vihreä reitti, odottaa paluuta Halliin
 }
 function drawCelebration() {
   if (RT.win < 0) return;
@@ -130,10 +154,10 @@ function drawCelebration() {
   const t = w - 0.25;
   if (t > 0) {
     const sc0 = Math.max(3, Math.round(Math.min(IW, IH) / 58)), e = Math.min(1, t / 0.55), back = 1 + 2.7 * Math.pow(e - 1, 3) + 1.7 * Math.pow(e - 1, 2);   // easeOutBack
-    const sz = Math.round(16 * sc0 * Math.max(0.01, back)), bob = Math.round(Math.sin(t * 5) * sc0 * 0.8);
+    const k = Math.max(0.01, back), sw = Math.round(24 * sc0 * k), sh = Math.round(20 * sc0 * k), bob = Math.round(Math.sin(t * 5) * sc0 * 0.8);
     const cx = Math.round(IW / 2), cy = Math.round(IH * 0.26) + bob;
     ctx.save(); ctx.imageSmoothingEnabled = false; ctx.globalAlpha = Math.min(1, Math.max(0, (RT_WIN_END - 0.7 - w) / 0.6 + 1));
-    ctx.drawImage(THUMB, cx - (sz >> 1), cy - (sz >> 1), sz, sz);
+    ctx.drawImage(THUMB, cx - (sw >> 1), cy - (sh >> 1), sw, sh);
     ctx.fillStyle = '#fff6b0';                    // pienet tähdet peukun ympärillä
     for (let i = 0; i < 6; i++) {
       const an = i * 1.0472 + t * 0.6, rr = sc0 * (11 + (i % 2) * 3), sx = Math.round(cx + Math.cos(an) * rr * 1.2), sy = Math.round(cy + Math.sin(an) * rr), on = ((t * 4 + i) % 2) < 1.4, q = sc0 > 4 ? 2 : 1;

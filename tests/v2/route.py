@@ -44,6 +44,8 @@ async def main():
         for k, t in enumerate([700, 1000, 1800, 2200]):
             await pg.wait_for_timeout(t); await pg.screenshot(path=f'/tmp/rt_2{k}.png'); print('fw', await frac(pg))
         await pg.wait_for_timeout(4500)
+        print('still full (not reset)', await frac(pg), 'bar', await pg.evaluate("document.getElementById('routefill').style.width"))
+        await pg.evaluate("(()=>{const T=__game.tractor;T.x=__game.gX(-70);T.y=__game.gY(660);T.speed=0})()"); await pg.wait_for_timeout(500)
         print('after reset', await frac(pg), 'bar', await pg.evaluate("document.getElementById('routefill').style.width"))
         await pg.screenshot(path='/tmp/rt_3_reset.png')
         print('errors', errs)
