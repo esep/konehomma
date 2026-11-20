@@ -31,7 +31,7 @@ function routeReset() {
   routeBarSet();
 }
 function routeBarSet() {
-  const left = RT.n ? Math.round((1 - RT.done / RT.n) * 1000) / 10 : 100;
+  const left = RT.n ? Math.round(RT.done / RT.n * 1000) / 10 : 0;
   if (left === RT.shown) return; RT.shown = left;
   routeFillEl.style.width = left + '%';
 }
