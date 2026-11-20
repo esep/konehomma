@@ -57,15 +57,17 @@ function routeStep(dt) {
 function drawRoute() {
   const o = new Path2D(), r = new Path2D(), g = new Path2D();
   for (const s of RT.lines) {
+    let prev = -2, pc = null;                       // edellinen piirretty pätkä ja sen väri: uusi alku aina kun jatkuvuus katkeaa (ruudun ulkopuolella olevat pisteet ohitetaan)
     for (let i = 0; i + 1 < s.length; i++) {
       const m = i % RT_PER; if (m >= RT_DASH) continue;
       const a = P([s[i].x, s[i].y, 0.02]);
       if (a[0] < -16 || a[0] > IW + 16 || a[1] < -16 || a[1] > IH + 16) continue;
-      const b = P([s[i + 1].x, s[i + 1].y, 0.02]), c = s[i].d && s[i + 1].d ? g : r, c0 = m && s[i - 1].d && s[i].d ? g : r;
-      if (m === 0) o.moveTo(a[0], a[1]);
+      const b = P([s[i + 1].x, s[i + 1].y, 0.02]), c = s[i].d && s[i + 1].d ? g : r, fresh = m === 0 || prev !== i - 1;
+      if (fresh) o.moveTo(a[0], a[1]);
       o.lineTo(b[0], b[1]);
-      if (m === 0 || c !== c0) c.moveTo(a[0], a[1]);
+      if (fresh || c !== pc) c.moveTo(a[0], a[1]);
       c.lineTo(b[0], b[1]);
+      prev = i; pc = c;
     }
   }
   ctx.save(); ctx.lineCap = 'butt'; ctx.lineJoin = 'round';

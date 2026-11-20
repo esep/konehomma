@@ -134,7 +134,7 @@ body.snowmode .mpick{display:none}
   </div>
   <div class="routebar" id="routebar" role="img" aria-label="Reittiä jäljellä"><i id="routefill"></i></div>
   <div class="hint" id="hint"></div>
-  <div class="ver">v2.3 · 21.11.2026</div>
+  <div class="ver">v2.4 · 21.11.2026</div>
   <button class="reset menub" id="menubtn" aria-label="Valikko"><svg viewBox="0 0 10 10"><path d="M1 2H9V3.4H1ZM1 4.3H9V5.7H1ZM1 6.6H9V8H1Z"/></svg><i class="mk">M</i></button>
   <button class="reset" id="reset" aria-label="Aloita alusta"><svg viewBox="0 0 10 10"><path d="M5 1A4 4 0 1 0 9 5H7.4A2.4 2.4 0 1 1 5 2.6V4.2L7.6 1.8L5 -0.6Z"/></svg></button>
 </div>
@@ -1567,7 +1567,7 @@ function buildHouse(h0) {
   h.skip = null; if (h0.skip) { h.skip = {}; for (const w in h0.skip) h.skip[WALLMAP[w]] = h0.skip[w].map(v => (WALLMAP[w] === 'S' || WALLMAP[w] === 'N') ? gX(v) : gY(v)).sort((a, b) => a - b); }
   const x0 = gX(h0.r[1]), x1 = gX(h0.r[3]), y0 = gY(h0.r[0]), y1 = gY(h0.r[2]), E = h.eave, Rg = h.ridge, xm = (x0 + x1) / 2, ym = (y0 + y1) / 2;
   h.u = [x0, y0, x1, y1];
-  footU.push(h.u); HB.push({ x0, y0, x1, y1, e: E, r: Rg, ax: h.ax, enter: !!h.enter, a: 0 }); const bi = HB.length - 1, tag = h.enter ? (vis => ({ bi, vis })) : () => ({}); SHAD.push({ u: h.u, h: E + 0.4 * (Rg - E) });
+  footU.push(h.u); HB.push({ x0, y0, x1, y1, e: E, r: Rg, ax: h.ax, enter: !!h.enter, a: 0 }); const bi = HB.length - 1, tag = h.enter ? (vis => ({ bi, vis })) : (vis => vis === 'roof' ? { rb: bi } : {}); SHAD.push({ u: h.u, h: E + 0.4 * (Rg - E) });
   const topS = a => h.ax === 'y' ? E + (Rg - E) * (1 - Math.abs(a - xm) / ((x1 - x0) / 2)) : E;
   const topE = a => h.ax === 'x' ? E + (Rg - E) * (1 - Math.abs(a - ym) / ((y1 - y0) / 2)) : E;
   const cv = (w, v) => w === 'S' || w === 'N' ? gX(v) : gY(v);
@@ -2132,6 +2132,9 @@ function updateSnow(dt) {
     const cc = Math.cos(T.h), ss = Math.sin(T.h);
     let hid = inside; if (!hid) for (const u of [-3.4, -1.5, 0, 1.6]) for (const z of [1.2, 2.4]) if (occByB(b, T.x + u * cc, T.y + u * ss, z)) { hid = true; break; }
     b.a = approach(b.a, hid ? 1 : 0, 5 * dt); }   // the roof and the near walls give way when the tractor is inside or hidden behind the building   // roof off while the tractor is in or at the door
+  for (const b of HB) if (!b.enter) {                // ei-sisäänajettavien rakennusten katto läpinäkyväksi kun traktori on lähellä: näkee traktorin ja reitin
+    const dx = Math.max(b.x0 - T.x, 0, T.x - b.x1), dy = Math.max(b.y0 - T.y, 0, T.y - b.y1);
+    b.fa = approach(b.fa || 0, Math.hypot(dx, dy) < 20 ? 1 : 0, 4 * dt); }
   drive(T, dt, true);
   routeStep(dt);
   const bl0 = T.bl, ch0 = T.chute;
@@ -2351,15 +2354,17 @@ function routeStep(dt) {
 function drawRoute() {
   const o = new Path2D(), r = new Path2D(), g = new Path2D();
   for (const s of RT.lines) {
+    let prev = -2, pc = null;                       // edellinen piirretty pätkä ja sen väri: uusi alku aina kun jatkuvuus katkeaa (ruudun ulkopuolella olevat pisteet ohitetaan)
     for (let i = 0; i + 1 < s.length; i++) {
       const m = i % RT_PER; if (m >= RT_DASH) continue;
       const a = P([s[i].x, s[i].y, 0.02]);
       if (a[0] < -16 || a[0] > IW + 16 || a[1] < -16 || a[1] > IH + 16) continue;
-      const b = P([s[i + 1].x, s[i + 1].y, 0.02]), c = s[i].d && s[i + 1].d ? g : r, c0 = m && s[i - 1].d && s[i].d ? g : r;
-      if (m === 0) o.moveTo(a[0], a[1]);
+      const b = P([s[i + 1].x, s[i + 1].y, 0.02]), c = s[i].d && s[i + 1].d ? g : r, fresh = m === 0 || prev !== i - 1;
+      if (fresh) o.moveTo(a[0], a[1]);
       o.lineTo(b[0], b[1]);
-      if (m === 0 || c !== c0) c.moveTo(a[0], a[1]);
+      if (fresh || c !== pc) c.moveTo(a[0], a[1]);
       c.lineTo(b[0], b[1]);
+      prev = i; pc = c;
     }
   }
   ctx.save(); ctx.lineCap = 'butt'; ctx.lineJoin = 'round';
@@ -2571,13 +2576,13 @@ function render() {
   for (const p of parts) {
     if (p.flake) { const f = p.flake, q = P([f.x, f.y, f.z]), sz = f.d ? 1 : 2; ctx.fillStyle = f.c ? '#ffffff' : '#cfdcf0'; ctx.fillRect(q[0], q[1], sz, sz); continue; }
     if (p.wp) {
-      const fa = p._fa; if (fa) ctx.globalAlpha = 0.4;
+      const fa = p._fa, ra = p.rb !== undefined ? 1 - 0.65 * (HB[p.rb].fa || 0) : 1; if (fa) ctx.globalAlpha = 0.4; else if (ra < 1) ctx.globalAlpha = ra;
       for (const pl of p.polys) {
         const w = pl.w; ctx.fillStyle = ctx.strokeStyle = pl.col; ctx.beginPath();
         for (let i = 0; i < w.length; i++) { const q = P(w[i]); i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); }
-        ctx.closePath(); ctx.fill(); if (!fa) ctx.stroke();
+        ctx.closePath(); ctx.fill(); if (!fa && ra > 0.99) ctx.stroke();
       }
-      if (fa) ctx.globalAlpha = 1;
+      if (fa || ra < 1) ctx.globalAlpha = 1;
       continue;
     }
     if (p.rock) { const q = P([p.rock.x, p.rock.y, p.rock.z]); ctx.drawImage(ROCKSPR[p.rock.s], q[0] - 12, q[1] - 13); continue; }

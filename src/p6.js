@@ -137,6 +137,9 @@ function updateSnow(dt) {
     const cc = Math.cos(T.h), ss = Math.sin(T.h);
     let hid = inside; if (!hid) for (const u of [-3.4, -1.5, 0, 1.6]) for (const z of [1.2, 2.4]) if (occByB(b, T.x + u * cc, T.y + u * ss, z)) { hid = true; break; }
     b.a = approach(b.a, hid ? 1 : 0, 5 * dt); }   // the roof and the near walls give way when the tractor is inside or hidden behind the building   // roof off while the tractor is in or at the door
+  for (const b of HB) if (!b.enter) {                // ei-sisäänajettavien rakennusten katto läpinäkyväksi kun traktori on lähellä: näkee traktorin ja reitin
+    const dx = Math.max(b.x0 - T.x, 0, T.x - b.x1), dy = Math.max(b.y0 - T.y, 0, T.y - b.y1);
+    b.fa = approach(b.fa || 0, Math.hypot(dx, dy) < 20 ? 1 : 0, 4 * dt); }
   drive(T, dt, true);
   routeStep(dt);
   const bl0 = T.bl, ch0 = T.chute;

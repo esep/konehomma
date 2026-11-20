@@ -92,7 +92,7 @@ function buildHouse(h0) {
   h.skip = null; if (h0.skip) { h.skip = {}; for (const w in h0.skip) h.skip[WALLMAP[w]] = h0.skip[w].map(v => (WALLMAP[w] === 'S' || WALLMAP[w] === 'N') ? gX(v) : gY(v)).sort((a, b) => a - b); }
   const x0 = gX(h0.r[1]), x1 = gX(h0.r[3]), y0 = gY(h0.r[0]), y1 = gY(h0.r[2]), E = h.eave, Rg = h.ridge, xm = (x0 + x1) / 2, ym = (y0 + y1) / 2;
   h.u = [x0, y0, x1, y1];
-  footU.push(h.u); HB.push({ x0, y0, x1, y1, e: E, r: Rg, ax: h.ax, enter: !!h.enter, a: 0 }); const bi = HB.length - 1, tag = h.enter ? (vis => ({ bi, vis })) : () => ({}); SHAD.push({ u: h.u, h: E + 0.4 * (Rg - E) });
+  footU.push(h.u); HB.push({ x0, y0, x1, y1, e: E, r: Rg, ax: h.ax, enter: !!h.enter, a: 0 }); const bi = HB.length - 1, tag = h.enter ? (vis => ({ bi, vis })) : (vis => vis === 'roof' ? { rb: bi } : {}); SHAD.push({ u: h.u, h: E + 0.4 * (Rg - E) });
   const topS = a => h.ax === 'y' ? E + (Rg - E) * (1 - Math.abs(a - xm) / ((x1 - x0) / 2)) : E;
   const topE = a => h.ax === 'x' ? E + (Rg - E) * (1 - Math.abs(a - ym) / ((y1 - y0) / 2)) : E;
   const cv = (w, v) => w === 'S' || w === 'N' ? gX(v) : gY(v);

@@ -108,13 +108,13 @@ function render() {
   for (const p of parts) {
     if (p.flake) { const f = p.flake, q = P([f.x, f.y, f.z]), sz = f.d ? 1 : 2; ctx.fillStyle = f.c ? '#ffffff' : '#cfdcf0'; ctx.fillRect(q[0], q[1], sz, sz); continue; }
     if (p.wp) {
-      const fa = p._fa; if (fa) ctx.globalAlpha = 0.4;
+      const fa = p._fa, ra = p.rb !== undefined ? 1 - 0.65 * (HB[p.rb].fa || 0) : 1; if (fa) ctx.globalAlpha = 0.4; else if (ra < 1) ctx.globalAlpha = ra;
       for (const pl of p.polys) {
         const w = pl.w; ctx.fillStyle = ctx.strokeStyle = pl.col; ctx.beginPath();
         for (let i = 0; i < w.length; i++) { const q = P(w[i]); i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); }
-        ctx.closePath(); ctx.fill(); if (!fa) ctx.stroke();
+        ctx.closePath(); ctx.fill(); if (!fa && ra > 0.99) ctx.stroke();
       }
-      if (fa) ctx.globalAlpha = 1;
+      if (fa || ra < 1) ctx.globalAlpha = 1;
       continue;
     }
     if (p.rock) { const q = P([p.rock.x, p.rock.y, p.rock.z]); ctx.drawImage(ROCKSPR[p.rock.s], q[0] - 12, q[1] - 13); continue; }
