@@ -77,32 +77,32 @@ function drawRoute() {
 
 /* ---------- ilotulitus ja peukku ---------- */
 const FW_COL = ['#ff4d4d', '#ffd23f', '#4dff88', '#4dd2ff', '#ff6ad5', '#ffffff', '#ff9a3c'];
+const THUMB_COL = {'a': '#4236b6', 'b': '#f2be46', 'c': '#fadf86', 'd': '#ee8860', 'e': '#101e89', 'f': '#58e372', 'g': '#3adb73', 'h': '#dcf0f9', 'i': '#96e8a0', 'j': '#fb641f', 'k': '#45a975', 'l': '#ffffff'};
 const THUMB_ROWS = [
-  '..........###...........',
-  '.........#sss#..........',
-  '.........#wsy#..........',
-  '.........#wsy#..........',
-  '.........#wsy#..........',
-  '.#####...#ssy#..........',
-  '#ccccc#..#sss#..........',
-  '#ccccc####sss###........',
-  '#bbbbbssssssssss#######.',
-  '#bbbbbssssssssyyywwwyyy#',
-  '#bbbbbssssssssyyyyyyyyy#',
-  '#bbbbbssssssssssswwsss#.',
-  '#bbbbbsssssssssoosssss#.',
-  '#bbbbbssssssssssswwss#..',
-  '#dddddsssssssssoossss#..',
-  '#dddddssssssssssswws#...',
-  '#dddddoooooooosoosss#...',
-  '#dddddooooooooss####....',
-  '.###############........',
-  '........................'
+  '.................aa........',
+  '................alba.......',
+  '................alba.......',
+  '...............alcde.......',
+  '...............aldde.......',
+  '..............albde........',
+  'aaaaa........alcda.........',
+  'fffffaaaaa..allbdaaaaaaaae.',
+  'ggggfallllaallbbbbbblllcbba',
+  'gggggahhhhelbbbbbbbbbbbbbde',
+  'gggggaiiiiabdbbbbbeeeeeeee.',
+  'gggggaiiffadddbbddeblllcda.',
+  'gggggeffffeddddddejdddddde.',
+  'gggggeffffeddddddeeaaaaae..',
+  'kkkkkeffffeddddddejdllcde..',
+  'kkkkkeffffeddddddejddddje..',
+  'kkkkkefeffejjddddeeaaaae...',
+  'kkkkkeffffeejjdddejdllbe...',
+  'kkkkkeeeee..eejjjjedddde...',
+  'eeeee.........eeeeeeeee....'
 ];
 const THUMB = (() => {
-  const c = document.createElement('canvas'); c.width = 24; c.height = 20; const x = c.getContext('2d');
-  const col = { '#': '#1b1b6b', b: '#1196ea', c: '#36cdf5', d: '#2d72b5', s: '#ee8c64', o: '#ff6a1a', y: '#f4c042', w: '#fff8dc' };
-  THUMB_ROWS.forEach((row, j) => { for (let i = 0; i < 24; i++) if (col[row[i]]) { x.fillStyle = col[row[i]]; x.fillRect(i, j, 1, 1); } });
+  const c = document.createElement('canvas'); c.width = THUMB_ROWS[0].length; c.height = THUMB_ROWS.length; const x = c.getContext('2d');
+  THUMB_ROWS.forEach((row, j) => { for (let i = 0; i < row.length; i++) if (THUMB_COL[row[i]]) { x.fillStyle = THUMB_COL[row[i]]; x.fillRect(i, j, 1, 1); } });
   return c;
 })();
 const RT_FW_END = 6.0, RT_WIN_END = 7.4;          // ilotulitteita tulee 6 s; reitti pysyy vihreänä ja nollautuu vasta kun traktori ajaa takaisin Halliin
@@ -155,7 +155,7 @@ function drawCelebration() {
   const t = w - 0.25;
   if (t > 0) {
     const sc0 = Math.max(3, Math.round(Math.min(IW, IH) / 58)), e = Math.min(1, t / 0.55), back = 1 + 2.7 * Math.pow(e - 1, 3) + 1.7 * Math.pow(e - 1, 2);   // easeOutBack
-    const k = Math.max(0.01, back), sw = Math.round(24 * sc0 * k), sh = Math.round(20 * sc0 * k), bob = Math.round(Math.sin(t * 5) * sc0 * 0.8);
+    const k = Math.max(0.01, back), sw = Math.round(THUMB.width * sc0 * k), sh = Math.round(THUMB.height * sc0 * k), bob = Math.round(Math.sin(t * 5) * sc0 * 0.8);
     const cx = Math.round(IW / 2), cy = Math.round(IH * 0.26) + bob;
     ctx.save(); ctx.imageSmoothingEnabled = false; ctx.globalAlpha = Math.min(1, Math.max(0, (RT_WIN_END - 0.7 - w) / 0.6 + 1));
     ctx.drawImage(THUMB, cx - (sw >> 1), cy - (sh >> 1), sw, sh);
