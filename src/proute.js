@@ -78,16 +78,16 @@ function drawRoute() {
 /* ---------- ilotulitus ja peukku ---------- */
 const FW_COL = ['#ff4d4d', '#ffd23f', '#4dff88', '#4dd2ff', '#ff6ad5', '#ffffff', '#ff9a3c'];
 const THUMB_ROWS = [
-  '..........####..........',
-  '.........#ssss#.........',
-  '.........#wsyy#.........',
-  '.........#wsyy#.........',
-  '.........#wsyy#.........',
-  '.#####...#ssyy#.........',
-  '#ccccc#..#ssss#.........',
-  '#ccccc#..#ssss#.........',
-  '#bbbbb#..#ssss#########.',
-  '#bbbbb####ssssyyywwwyyy#',
+  '..........###...........',
+  '.........#sss#..........',
+  '.........#wsy#..........',
+  '.........#wsy#..........',
+  '.........#wsy#..........',
+  '.#####...#ssy#..........',
+  '#ccccc#..#sss#..........',
+  '#ccccc####sss###........',
+  '#bbbbbssssssssss#######.',
+  '#bbbbbssssssssyyywwwyyy#',
   '#bbbbbssssssssyyyyyyyyy#',
   '#bbbbbssssssssssswwsss#.',
   '#bbbbbsssssssssoosssss#.',
@@ -97,7 +97,8 @@ const THUMB_ROWS = [
   '#dddddoooooooosoosss#...',
   '#dddddooooooooss####....',
   '.###############........',
-  '........................'];
+  '........................'
+];
 const THUMB = (() => {
   const c = document.createElement('canvas'); c.width = 24; c.height = 20; const x = c.getContext('2d');
   const col = { '#': '#1b1b6b', b: '#1196ea', c: '#36cdf5', d: '#2d72b5', s: '#ee8c64', o: '#ff6a1a', y: '#f4c042', w: '#fff8dc' };
