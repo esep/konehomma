@@ -25,6 +25,7 @@ function render() {
     }
     ctx.fillStyle = 'rgba(30,44,90,0.3)';
     drawShadow(tractor, -3.95, 2.3, 1.3);
+    drawRoute();
   } else {
   ctx.drawImage(ground, OX, OY);
   for (const H of HOLES) ctx.drawImage(H.done ? H.patch : H.spr, OX + H.bx, OY + H.by);
@@ -183,6 +184,7 @@ function render() {
   }
   ctx.globalAlpha = 1;
   drawPointer(active);
+  if (snowy) drawCelebration();
 }
 
 /* ---------- levels and the start menu ---------- */
@@ -298,5 +300,5 @@ function frame(t) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.__game = { setScene, keys, tractor, loader, truck, exc, CR, rocks, balls, action, gX, gY, startLevel: lv => startLevel(lv), snd: () => ({ loaded: Object.keys(SB), exc: Object.keys(EXB), st: curEng && curEng.st, eng: curEng && curEng.id, wind: !!wSrc, wl: wGain && wGain.gain.value, tg: tGain && tGain.gain.value, ac: AC && AC.state }) };
+window.__game = { RT, setScene, keys, tractor, loader, truck, exc, CR, rocks, balls, action, gX, gY, startLevel: lv => startLevel(lv), snd: () => ({ loaded: Object.keys(SB), exc: Object.keys(EXB), st: curEng && curEng.st, eng: curEng && curEng.id, wind: !!wSrc, wl: wGain && wGain.gain.value, tg: tGain && tGain.gain.value, ac: AC && AC.state }) };
 })();

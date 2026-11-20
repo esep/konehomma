@@ -306,6 +306,13 @@ function jingle(big) {
     o.connect(g).connect(master); o.start(s0); o.stop(s0 + 0.25);
   });
 }
+function fwPop() {                              // pehmeä ilotulitteen poksahdus: lyhyt matala kohina, hiljainen
+  if (!AC) return; const t = AC.currentTime, R = Math.random;
+  const s = AC.createBufferSource(); s.buffer = noise; s.playbackRate.value = 0.7 + R() * 0.5;
+  const f = AC.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 500 + R() * 900; f.Q.value = 0.8;
+  const g = AC.createGain(); g.gain.setValueAtTime(0.08, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+  s.connect(f).connect(g).connect(master); s.start(t); s.stop(t + 0.24);
+}
 function plop() {
   if (!AC) return; const t = AC.currentTime; if (t - lastPlop < 0.07) return; lastPlop = t;
   const o = AC.createOscillator(); o.type = 'sine';

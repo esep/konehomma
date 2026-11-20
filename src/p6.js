@@ -60,6 +60,7 @@ function resetSnow(first) {
   resetMachine(tractor, START_S);
   Object.assign(tractor, { state: 1, bl: 1, rpm: 0, aug: 0, chute: Math.PI / 2, clr: 0, pclr: 0, pile: 0, em: 0, smk: 0 });
   camInit = false;
+  routeReset();
 }
 
 /* cut a rectangle (in the frame of centre cx,cy and heading h) out of the snow (mode 0), or press a tyre track into it (mode 1) */
@@ -137,6 +138,7 @@ function updateSnow(dt) {
     let hid = inside; if (!hid) for (const u of [-3.4, -1.5, 0, 1.6]) for (const z of [1.2, 2.4]) if (occByB(b, T.x + u * cc, T.y + u * ss, z)) { hid = true; break; }
     b.a = approach(b.a, hid ? 1 : 0, 5 * dt); }   // the roof and the near walls give way when the tractor is inside or hidden behind the building   // roof off while the tractor is in or at the door
   drive(T, dt, true);
+  routeStep(dt);
   const bl0 = T.bl, ch0 = T.chute;
   T.bl = approach(T.bl, T.state, 1.4 * dt);      // loader plate: 1 = raised, 0 = lowered
   if (keys.swl !== keys.swr) T.chute = Math.max(CH_MIN, Math.min(CH_MAX, T.chute + (keys.swl ? 1 : -1) * 1.1 * dt));      // only the rear half circle: never towards the front
