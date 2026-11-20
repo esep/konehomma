@@ -104,7 +104,7 @@ function setActive(m) {
 }
 function nextMachine() { if (scene === 'snow') return; setActive(machines[(machines.indexOf(active) + 1) % machines.length]); }
 function action() {
-  if (active === tractor) tractor.state = 1 - tractor.state;
+  if (active === tractor) tractor.state = (tractor.state + 1) % 3;   // 0 linko alas + levy ylös (oletus), 1 molemmat ylös, 2 levy alas + linko ylös
   else if (active === loader) loader.state = (loader.state + 1) % 3;
   else if (active === truck) truck.state = (truck.state + 1) % 2;
   else if (exc.state < 4) exc.state++;

@@ -16,14 +16,14 @@ let scene = 'yard';
 const stage = document.getElementById('stage');
 const cv = document.getElementById('cv');
 const ctx = cv.getContext('2d');
-let IW = 0, IH = 0, SC = 2;
+let IW = 0, IH = 0, SC = 2, ZOOM = 1;      // ZOOM < 1: kamera kauempaa (Mikkolan talvi)
 
 const isTouch = matchMedia('(pointer: coarse)').matches || (navigator.maxTouchPoints || 0) > 0;
 if (isTouch) document.body.classList.add('touch');
 
 function resize() {
   const W = stage.clientWidth, H = stage.clientHeight, dpr = window.devicePixelRatio || 1;
-  SC = Math.max(dpr >= 2 ? 0.8 : 1.1, Math.min(W, H) / 440);
+  SC = Math.max(dpr >= 2 ? 0.8 : 1.1, Math.min(W, H) / 440) * ZOOM;
   if (dpr >= 2) SC = Math.max(1, Math.round(SC * dpr)) / dpr;   // whole device pixels per game pixel
   IW = Math.ceil(W / SC); IH = Math.ceil(H / SC);
   cv.width = IW; cv.height = IH;

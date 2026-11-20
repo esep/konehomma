@@ -58,7 +58,7 @@ function resetSnow(first) {
   bctx.clearRect(0, 0, SCW, SCH); bankN.fill(0);
   flakes.length = 0; smoke.length = 0;
   resetMachine(tractor, START_S);
-  Object.assign(tractor, { state: 1, bl: 1, rpm: 0, aug: 0, chute: Math.PI / 2, clr: 0, pclr: 0, pile: 0, em: 0, smk: 0 });
+  Object.assign(tractor, { state: 0, bl: 1, bw: 1, rpm: 0, aug: 0, chute: Math.PI / 2, clr: 0, pclr: 0, pile: 0, em: 0, smk: 0 });
   camInit = false;
   routeReset();
 }
@@ -140,11 +140,13 @@ function updateSnow(dt) {
   drive(T, dt, true);
   routeStep(dt);
   const bl0 = T.bl, ch0 = T.chute;
-  T.bl = approach(T.bl, T.state, 1.4 * dt);      // loader plate: 1 = raised, 0 = lowered
+  const bw0 = T.bw;
+  T.bl = approach(T.bl, T.state === 2 ? 0 : 1, 1.4 * dt);      // loader plate: 1 = raised, 0 = lowered
+  T.bw = approach(T.bw, T.state === 0 ? 1 : 0, 1.4 * dt);      // rear blower: 1 = lowered (works), 0 = raised
   if (keys.swl !== keys.swr) T.chute = Math.max(CH_MIN, Math.min(CH_MAX, T.chute + (keys.swl ? 1 : -1) * 1.1 * dt));      // only the rear half circle: never towards the front
-  const moving = T.bl !== bl0 || T.chute !== ch0;
+  const moving = T.bl !== bl0 || T.bw !== bw0 || T.chute !== ch0;
   const indoors = inBld(T.x, T.y) || inBld(T.x - 3 * Math.cos(T.h), T.y - 3 * Math.sin(T.h));   // no blowing inside a building
-  T.rpm = approach(T.rpm, T.bl > 0.7 && !indoors ? 1 : 0, 4 * dt);   // the blower only runs with the plate up
+  T.rpm = approach(T.rpm, T.bl > 0.7 && T.bw > 0.7 && !indoors ? 1 : 0, 4 * dt);   // the blower only runs lowered and with the plate up
   T.aug += T.rpm * 14 * dt;
   const c = Math.cos(T.h), s = Math.sin(T.h), L2W = (u, v) => [T.x + u * c - v * s, T.y + u * s + v * c];
 
@@ -280,17 +282,18 @@ function buildTractor(parts) {
     }
   }
   // rear blower: delta/V opening forwards, apex at the back where the chute is
-  for (const sg of [1, -1]) beam([-1.55, sg * 0.45, 0.6], [-2.4, sg * 0.95, 0.55], 0.05, 0.07, COL.CH);
-  box(-3.95, -3.3, -0.4, 0.4, 0.15, 0.9, COL.BLW);
+  const BLF = (1 - T.bw) * 0.9;                                   // raised blower: the whole rear unit lifts
+  for (const sg of [1, -1]) beam([-1.55, sg * 0.45, 0.6], [-2.4, sg * 0.95, 0.55 + BLF], 0.05, 0.07, COL.CH);
+  box(-3.95, -3.3, -0.4, 0.4, 0.15 + BLF, 0.9 + BLF, COL.BLW);
   for (const sg of [1, -1]) {
     const du = 0.707, dv = sg * 0.707, pu2 = -sg * 0.707, pv2 = 0.707;   // wing direction (apex to tip) and across-wing direction
-    addBox(W(-3.1, sg * 0.65, 0.53), Dv(du * 0.92, dv * 0.92, 0), Dv(pu2 * 0.3, pv2 * 0.3, 0), [0, 0, 0.38], COL.BLW);
-    addBox(W(-2.45, sg * 1.3, 0.5), Dv(du * 0.04, dv * 0.04, 0), Dv(pu2 * 0.32, pv2 * 0.32, 0), [0, 0, 0.4], COL.BLW2, 0.02);
+    addBox(W(-3.1, sg * 0.65, 0.53 + BLF), Dv(du * 0.92, dv * 0.92, 0), Dv(pu2 * 0.3, pv2 * 0.3, 0), [0, 0, 0.38], COL.BLW);
+    addBox(W(-2.45, sg * 1.3, 0.5 + BLF), Dv(du * 0.04, dv * 0.04, 0), Dv(pu2 * 0.32, pv2 * 0.32, 0), [0, 0, 0.4], COL.BLW2, 0.02);
   }
   // chute: turntable, tube, elbow pointing the way the snow is thrown, deflector cap
   const a = T.chute, ca = Math.cos(a), sa = Math.sin(a);
-  box(-3.85, -3.25, -0.3, 0.3, 0.9, 1.0, COL.BLW2);
-  box(-3.7, -3.4, -0.15, 0.15, 1.0, 1.28, COL.BLW);
-  addBox(W(CH_U + ca * 0.34, sa * 0.34, 1.26), Dv(ca * 0.36, sa * 0.36, 0), Dv(-sa * 0.17, ca * 0.17, 0), [0, 0, 0.14], COL.BLW, 0.02);
-  addBox(W(CH_U + ca * 0.72, sa * 0.72, 1.32), Dv(ca * 0.1, sa * 0.1, 0), Dv(-sa * 0.21, ca * 0.21, 0), [0, 0, 0.1], COL.BLW2, 0.03);
+  box(-3.85, -3.25, -0.3, 0.3, 0.9 + BLF, 1.0 + BLF, COL.BLW2);
+  box(-3.7, -3.4, -0.15, 0.15, 1.0 + BLF, 1.28 + BLF, COL.BLW);
+  addBox(W(CH_U + ca * 0.34, sa * 0.34, 1.26 + BLF), Dv(ca * 0.36, sa * 0.36, 0), Dv(-sa * 0.17, ca * 0.17, 0), [0, 0, 0.14], COL.BLW, 0.02);
+  addBox(W(CH_U + ca * 0.72, sa * 0.72, 1.32 + BLF), Dv(ca * 0.1, sa * 0.1, 0), Dv(-sa * 0.21, ca * 0.21, 0), [0, 0, 0.1], COL.BLW2, 0.03);
 }

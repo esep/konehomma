@@ -189,7 +189,7 @@ function render() {
 
 /* ---------- levels and the start menu ---------- */
 const hint = document.getElementById('hint');
-const HINT_SNOW = '<b>← → ↑ ↓</b> ajaminen · <b>välilyönti</b> puskulevy ylös/alas · <b>Del PgDn</b> lingon suunta · <b>M</b> valikko';
+const HINT_SNOW = '<b>← → ↑ ↓</b> ajaminen · <b>välilyönti</b> työkalun vaihto · <b>Del PgDn</b> lingon suunta · <b>M</b> valikko';
 const hintYard = m => '<b>← → ↑ ↓</b> ajaminen · <b>välilyönti</b> ' + (m === truck ? 'lava' : 'kauha') + (m === exc ? ' · <b>Del PgDn</b> tornin kääntö' : '') + ' · <b class="num">1 2 3</b> vaihtaa konetta · <b>M</b> valikko';
 let hintKey = '';
 function hintStep() { const k = scene === 'snow' ? 'snow' : String(machines.indexOf(active)); if (k === hintKey) return; hintKey = k; hint.innerHTML = scene === 'snow' ? HINT_SNOW : hintYard(active); }
@@ -204,10 +204,11 @@ function setScene(s) {
   const sn = scene === 'snow';
   document.body.classList.toggle('snowmode', sn);
   camInit = false;
+  ZOOM = sn ? 0.8 : 1; resize();
   hintKey = ''; hintStep();
   const lbl = sn ? ['Käännä puhallusta vasemmalle', 'Käännä puhallusta oikealle'] : ['Käännä tornia vasemmalle', 'Käännä tornia oikealle'];
   document.getElementById('swlb').setAttribute('aria-label', lbl[0]); document.getElementById('swrb').setAttribute('aria-label', lbl[1]);
-  document.getElementById('act').setAttribute('aria-label', sn ? 'Nosta tai laske puskulevy' : 'Kauha tai lava');
+  document.getElementById('act').setAttribute('aria-label', sn ? 'Vaihda työkalu: linko, ei työkaluja tai puskulevy' : 'Kauha tai lava');
 }
 
 /* ---------- input ---------- */
