@@ -252,7 +252,7 @@ function buildTaloRoof() {
   const sm = (Rg - E) / (Ye - Ym), sc = (Rg - E) / (Xcs - Xc), rc = snowMix(MC.RF_BLK, 0.05);
   const hE = Y => Rg - sm * (Y - Ym), hW = Y => Rg - sm * (Ym - Y), hS = X => Rg - sc * (X - Xc), hN = X => Rg - sc * (Xc - X);
   const strips = (a, b, extra = []) => { const cs = new Set([a, b, ...extra.filter(v => v > a && v < b)]), c = [...cs].sort((p, q) => p - q), out = []; for (let i = 0; i < c.length - 1; i++) { const n = Math.max(1, Math.ceil((c[i + 1] - c[i]) / 1.0)); for (let j = 0; j < n; j++) out.push([c[i] + (c[i + 1] - c[i]) * j / n, c[i] + (c[i + 1] - c[i]) * (j + 1) / n]); } return out; };
-  const put = (poly, col, cx, cy) => MPARTS.push({ k: cx + cy + B, wp: true, c: [cx, cy, E], rad: 2.4, polys: [pw(poly, col)] });
+  const RBI = HOUSES.indexOf(M0), put = (poly, col, cx, cy) => MPARTS.push({ rb: RBI, k: cx + cy + B, wp: true, c: [cx, cy, E], rad: 2.4, polys: [pw(poly, col)] });
   // west slope of the long roof
   for (const [a, b] of strips(Xn - og, Xs + og)) put([[a, Ym, Rg], [b, Ym, Rg], [b, Yw - ov, hW(Yw - ov)], [a, Yw - ov, hW(Yw - ov)]], sh(rc, 0.8), (a + b) / 2, (Ym + Yw) / 2);
   // east slope of the long roof: bounded by the valleys where the cross gable stands
@@ -272,7 +272,7 @@ function buildTaloRoof() {
     put([[na, a, hN(na)], [nb, b, hN(nb)], [Xc, b, hN(Xc)], [Xc, a, hN(Xc)]], sh(rc, 0.78), (Xc + (na + nb) / 2) / 2, ma);
   }
   // white barge boards along the gable end
-  const bg = (X0, X1, h0, h1) => MPARTS.push({ k: (X0 + X1) / 2 + Yg + og + B + 0.2, wp: true, c: [(X0 + X1) / 2, Yg, E], rad: 6, polys: [pw([[X0, Yg + og, h0], [X1, Yg + og, h1], [X1, Yg + og, h1 - 0.2], [X0, Yg + og, h0 - 0.2]], sh([240, 238, 232], FACE.S))] });
+  const bg = (X0, X1, h0, h1) => MPARTS.push({ rb: RBI, k: (X0 + X1) / 2 + Yg + og + B + 0.2, wp: true, c: [(X0 + X1) / 2, Yg, E], rad: 6, polys: [pw([[X0, Yg + og, h0], [X1, Yg + og, h1], [X1, Yg + og, h1 - 0.2], [X0, Yg + og, h0 - 0.2]], sh([240, 238, 232], FACE.S))] });
   bg(Xcs + ov, Xc, hS(Xcs + ov), Rg); bg(Xc, Xcn - ov, Rg, hN(Xcn - ov));
 }
 buildTaloRoof();
