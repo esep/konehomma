@@ -229,7 +229,7 @@ function buildHouse(h0) {
   }
   // ---- collisions ----
   const T = 0.2, ins = 0.18;
-  if (!h.enter) SNOW_OBST.push({ x: (x0 + x1) / 2, y: (y0 + y1) / 2, h: 0, rect: [-(x1 - x0) / 2, (x1 - x0) / 2, (y1 - y0) / 2] });
+  if (!h.enter) SNOW_OBST.push({ x: (x0 + x1) / 2, y: (y0 + y1) / 2, h: 0, tall: true, rect: [-(x1 - x0) / 2, (x1 - x0) / 2, (y1 - y0) / 2] });
   else for (const wall of ['N', 'S', 'W', 'E']) {
     if (wall === h.nowall) continue;
     const horiz = wall === 'N' || wall === 'S', A0 = horiz ? x0 : y0, A1 = horiz ? x1 : y1, plane = wall === 'N' ? y0 + ins : wall === 'S' ? y1 - ins : wall === 'W' ? x0 + ins : x1 - ins;
@@ -238,7 +238,8 @@ function buildHouse(h0) {
     for (const g of gaps) { if (g[0] > cur) segs.push([cur, g[0]]); cur = Math.max(cur, g[1]); }
     if (cur < A1) segs.push([cur, A1]);
     for (const [a, b] of segs) { if (b - a < 0.05) continue; const mid = (a + b) / 2, len = (b - a) / 2;
-      SNOW_OBST.push(horiz ? { x: mid, y: plane, h: 0, rect: [-len, len, T] } : { x: plane, y: mid, h: 0, rect: [-len, len, T], rot: 1 }); }
+      SNOW_OBST.push(horiz ? { x: mid, y: plane, h: 0, tall: true, rect: [-len, len, T] } : { x: plane, y: mid, h: 0, tall: true, rect: [-len, len, T], rot: 1 }); }
+    for (const g of gaps) DOORS.push({ horiz, plane, a0: g[0], a1: g[1] });
   }
 }
 for (const h of HOUSES) if (h.eave > 1) { const e = h.eave; h.eave = e * 1.25; h.ridge = h.eave + (h.ridge - e) * 1.8; }   // the world is twice as wide: taller walls and a roof pitch that still looks right

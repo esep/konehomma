@@ -71,7 +71,9 @@ body.snowmode .routebar{display:flex}
 .mb.snowb{--mc:#a9d8f5;overflow:hidden;margin-left:8px}
 .mb.snowb i{position:absolute;left:0;right:0;bottom:0;height:calc(var(--p,0) * 100%);background:rgba(255,255,255,.7);pointer-events:none}
 .mb.snowb svg{position:relative;z-index:1;margin-top:0;width:78%;height:78%}
-body.snowmode .mpick{display:none}
+.mb[data-s]{display:none}
+body.snowmode .mb[data-m]{display:none}
+body.snowmode .mb[data-s]{display:grid}
 .toast{position:absolute;top:calc(12px + var(--m) + 20px);left:max(12px,env(safe-area-inset-left,0px));background:rgba(42,36,32,.88);color:var(--paper);
   padding:6px 12px;border-radius:4px;font-size:15px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:4}
 .toast.show{opacity:1}
@@ -112,6 +114,8 @@ body.snowmode .mpick{display:none}
     <button class="mb" tabindex="-1" data-m="0" style="--mc:var(--c-loader)" aria-label="1 Pyöräkuormaaja"><span>1</span><svg viewBox="0 0 12 12"><path d="M3 2H6V5H8L10 7H11V10H9V8H8V7H1V5H3Z"/><circle cx="3" cy="9" r="1.6"/><circle cx="7" cy="9" r="1.6"/></svg></button>
     <button class="mb" tabindex="-1" data-m="1" style="--mc:var(--c-truck)" aria-label="2 Kuorma-auto"><span>2</span><svg viewBox="0 0 12 12"><path d="M1 4H7V8H1Z M8 3H11V8H8Z"/><circle cx="3" cy="9" r="1.5"/><circle cx="9.3" cy="9" r="1.5"/></svg></button>
     <button class="mb" tabindex="-1" data-m="2" style="--mc:var(--c-exc)" aria-label="3 Kaivuri"><span>3</span><svg viewBox="0 0 12 12"><path d="M1 5H6V3H8V7H1Z M7 4L9 1L11 2L11 6L9 6L10 3L8 5Z"/><circle cx="2.5" cy="9" r="1.5"/><circle cx="6" cy="9" r="1.5"/></svg></button>
+    <button class="mb" tabindex="-1" data-s="0" style="--mc:#e8742a" aria-label="1 Lumiaura-traktori"><span>1</span><svg viewBox="0 0 12 12"><path d="M5 2H8V6H11V8H5Z M0 5H3V8H0Z"/><circle cx="8" cy="9" r="2"/><circle cx="2.4" cy="9.4" r="1.3"/></svg></button>
+    <button class="mb" tabindex="-1" data-s="1" style="--mc:#a8362e" aria-label="2 David Brown -traktori ja nosturi"><span>2</span><svg viewBox="0 0 12 12"><path d="M5 5H8V8H5Z M0 6H4V8H0Z M5 4L8 0.5L10 1.5L9.3 2.6L8 1.9L6.2 4Z"/><circle cx="7.6" cy="9.2" r="1.9"/><circle cx="2.4" cy="9.4" r="1.3"/></svg></button>
   </div>
   <div class="toast" id="toast"></div>
   <div class="loading" id="loading"><i></i><i></i><i></i><span>Ladataan…</span></div>

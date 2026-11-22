@@ -29,6 +29,10 @@ function toolSnd(key, name, on, vol, loop) {
     o.g.gain.setTargetAtTime(0, t, 0.04); try { o.s.stop(t + 0.2); } catch (e) {} TS[key] = null;
   }
 }
+function oneShot(name, vol) {                        // nosturin tartunta (kiinni) ja irtoaminen (irti)
+  if (!AC || !TB[name]) return; const s = AC.createBufferSource(); s.buffer = TB[name]; const g = AC.createGain(); g.gain.value = vol;
+  s.connect(g).connect(master); s.start(AC.currentTime);
+}
 function bump(sp) {                                  // törmäys: kone pysähtyi esteeseen
   if (!AC || !TB.hit || sp < 0.6) return; const t = AC.currentTime; if (t - lastBump < 1.2) return; lastBump = t; bumpN++;
   const s = AC.createBufferSource(); s.buffer = TB.hit; const g = AC.createGain(); g.gain.value = 0.4 + 0.45 * Math.min(1, sp / 3);
@@ -52,7 +56,7 @@ function stopEng(E) {
 function pickEngine() {
   const ok = B => B.idle && B.start && B.run && B.decel;
   if (!ok(SB)) return null;
-  if (scene === 'snow') return active === tractor ? engOf('tractor', SB, 1.0) : null;
+  if (scene === 'snow') return active === tractor ? engOf('tractor', SB, 1.0) : active === david ? engOf('david', SB, 0.9) : null;   // David: hieman matalampi
   if (active === truck) return engOf('truck', SB, 0.72);          // heavy diesel: lower
   if (active === loader) return engOf('loader', SB, 1.22);        // wheel loader: higher
   if (active === exc && ok(EXB) && EXB.dig) return engOf('exc', EXB, 1.0);
@@ -98,7 +102,7 @@ function soundStep(dt, moving, blow) {
   windStep(dt);
   if (E) recEngine(E, active, dt, blow, excDig); else if (tGain) setG(tGain, 0);
   setG(engG, rec ? 0 : 0.05 + 0.05 * sp + (moving ? 0.03 : 0) + blow * 0.03);
-  engO.frequency.setTargetAtTime((active === truck ? 38 : active === exc ? 41 : active === tractor ? 34 : 44) + sp * 22 + (moving ? 10 : 0) + blow * 8, AC.currentTime, 0.1);
+  engO.frequency.setTargetAtTime((active === truck ? 38 : active === exc ? 41 : active === tractor ? 34 : active === david ? 31 : 44) + sp * 22 + (moving ? 10 : 0) + blow * 8, AC.currentTime, 0.1);
   setG(hydG, moving ? 0.035 : 0);
   setG(blowG, blow * 0.42);
   blowF.frequency.setTargetAtTime(380 + 800 * blow, AC.currentTime, 0.2);

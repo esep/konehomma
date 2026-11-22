@@ -59,6 +59,7 @@ function resetSnow(first) {
   flakes.length = 0; smoke.length = 0;
   resetMachine(tractor, START_S);
   Object.assign(tractor, { state: 0, bl: 1, bw: 1, rpm: 0, aug: 0, chute: Math.PI / 2, clr: 0, pclr: 0, pile: 0, em: 0, smk: 0 });
+  davidReset();
   camInit = false;
   routeReset(); foxReset();
 }
@@ -132,23 +133,24 @@ function chuteOut() {                          // where the snow leaves the chut
 
 function updateSnow(dt) {
   time += dt;
-  const T = tractor;
-  for (const b of HB) if (b.enter) { const m = 2.4, inside = T.x > b.x0 - m && T.x < b.x1 + m && T.y > b.y0 - m && T.y < b.y1 + m;
-    const cc = Math.cos(T.h), ss = Math.sin(T.h);
-    let hid = inside; if (!hid) for (const u of [-3.4, -1.5, 0, 1.6]) for (const z of [0.4, 1.2, 2.4, 3.4]) if (occByB(b, T.x + u * cc, T.y + u * ss, z)) { hid = true; break; }
-    if (!hid && T.x < b.x1 + 1 && T.y < b.y1 + 1) { const nx = Math.max(b.x0 - T.x, 0, T.x - b.x1), ny = Math.max(b.y0 - T.y, 0, T.y - b.y1); if (Math.hypot(nx, ny) < 8) hid = true; }   // rakennuksen takana (kameraan nähden) lähellä: katto pois, jotta traktori ja reitti näkyvät
-    b.a = approach(b.a, hid ? 1 : 0, 5 * dt); }   // the roof and the near walls give way when the tractor is inside or hidden behind the building   // roof off while the tractor is in or at the door
+  const T = tractor, D = david, TA = active === T;
+  const hideFor = (b, M) => { const m = 2.4, inside = M.x > b.x0 - m && M.x < b.x1 + m && M.y > b.y0 - m && M.y < b.y1 + m;
+    const cc = Math.cos(M.h), ss = Math.sin(M.h);
+    let hid = inside; if (!hid) for (const u of [-3.4, -1.5, 0, 1.6]) for (const z of [0.4, 1.2, 2.4, 3.4]) if (occByB(b, M.x + u * cc, M.y + u * ss, z)) { hid = true; break; }
+    if (!hid && M.x < b.x1 + 1 && M.y < b.y1 + 1) { const nx = Math.max(b.x0 - M.x, 0, M.x - b.x1), ny = Math.max(b.y0 - M.y, 0, M.y - b.y1); if (Math.hypot(nx, ny) < 8) hid = true; }   // rakennuksen takana (kameraan nähden) lähellä: katto pois, jotta kone ja reitti näkyvät
+    return hid; };
+  for (const b of HB) if (b.enter) b.a = approach(b.a, hideFor(b, T) || hideFor(b, D) ? 1 : 0, 5 * dt);   // the roof and the near walls give way when a tractor is inside or hidden behind the building
   for (const b of HB) if (!b.enter) {                // ei-sisäänajettavien rakennusten katto läpinäkyväksi kun traktori on lähellä: näkee traktorin ja reitin
-    const dx = Math.max(b.x0 - T.x, 0, T.x - b.x1), dy = Math.max(b.y0 - T.y, 0, T.y - b.y1);
+    const dx = Math.min(Math.max(b.x0 - T.x, 0, T.x - b.x1), Math.max(b.x0 - D.x, 0, D.x - b.x1)), dy = Math.min(Math.max(b.y0 - T.y, 0, T.y - b.y1), Math.max(b.y0 - D.y, 0, D.y - b.y1));
     b.fa = approach(b.fa || 0, Math.hypot(dx, dy) < 20 ? 1 : 0, 4 * dt); }
-  drive(T, dt, true);
+  drive(T, dt, TA); drive(D, dt, !TA);
   routeStep(dt);
   foxStep(dt);
   const bl0 = T.bl, ch0 = T.chute;
   const bw0 = T.bw;
   T.bl = approach(T.bl, T.state === 2 ? 0 : 1, 1.4 * dt);      // loader plate: 1 = raised, 0 = lowered
   T.bw = approach(T.bw, T.state === 0 ? 1 : 0, 1.4 * dt);      // rear blower: 1 = lowered (works), 0 = raised
-  if (keys.swl !== keys.swr) T.chute = Math.max(CH_MIN, Math.min(CH_MAX, T.chute + (keys.swl ? 1 : -1) * 1.1 * dt));      // only the rear half circle: never towards the front
+  if (TA && keys.swl !== keys.swr) T.chute = Math.max(CH_MIN, Math.min(CH_MAX, T.chute + (keys.swl ? 1 : -1) * 1.1 * dt));      // only the rear half circle: never towards the front
   const moving = T.bl !== bl0 || T.bw !== bw0 || T.chute !== ch0;
   toolSnd('Tl', 'levy', T.bl !== bl0, 0.5); toolSnd('Tw', 'linko', T.bw !== bw0, 0.5);
   const indoors = inBld(T.x, T.y) || inBld(T.x - 3 * Math.cos(T.h), T.y - 3 * Math.sin(T.h));   // no blowing inside a building
@@ -216,7 +218,8 @@ function updateSnow(dt) {
     const k = smoke[i]; k.age += dt; k.x += k.vx * dt; k.y += k.vy * dt; k.z += k.vz * dt; k.vz *= 1 - 0.4 * dt;
     if (k.age >= k.life) smoke.splice(i, 1);
   }
-  soundStep(dt, moving, T.rpm * (0.4 + 0.6 * Math.min(1, Math.abs(T.speed) / 2.2)));
+  const dMoving = updateDavid(dt);
+  soundStep(dt, TA ? moving : dMoving, TA ? T.rpm * (0.4 + 0.6 * Math.min(1, Math.abs(T.speed) / 2.2)) : 0);
   snowfallStep(dt);
   followCam(dt);
 }

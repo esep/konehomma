@@ -45,7 +45,14 @@ const tractor = {
   rect: [-3.95, 2.3, 1.3], wb: 2.3, R: 0.62, tyre: 0.2, vmax: 2.4, vrev: 1.4, maxSteer: 0.62, top: 2.9,
   wheels: [[1.0, 0.8, 1, 0.14], [1.0, -0.8, 1, 0.14], [-0.85, 1.02, 0, 0.2], [-0.85, -1.02, 0, 0.2]]
 };
-loader.phase = 0; truck.phase = 2; exc.phase = 4; tractor.phase = 1;
+// David Brown: iso takarengas, pienet renkaat niiden edessä, eturenkaat; kääntyvä nosturi katolla (pdavid.js). wheels: [u, v, steered, half width]
+const david = {
+  kind: 'david', swingable: true, icon: 'M7 1H9V2H10V3H11V4H5V3H6V2H7Z M7 4H9V12H7Z M5 11H11V12H10V13H9V14H7V13H6V12H5Z',
+  rect: [-2.2, 2.5, 1.2], wb: 2.4, R: 0.62, tyre: 0.2, vmax: 2.2, vrev: 1.3, maxSteer: 0.6, top: 3.1,
+  wheels: [[1.6, 0.82, 1, 0.14], [1.6, -0.82, 1, 0.14], [0.5, 0.88, 0, 0.12], [0.5, -0.88, 0, 0.12], [-0.8, 1.05, 0, 0.2], [-0.8, -1.05, 0, 0.2]]
+};
+const snowMachines = [tractor, david];
+loader.phase = 0; truck.phase = 2; exc.phase = 4; tractor.phase = 1; david.phase = 3;
 // Rock crusher on tracks with a conveyor that keeps a gravel pile topped up
 const CR = { x: 21, y: 28.5, h: -Math.PI / 4, rect: [-2.75, 2.7, 0.95], roll: 0, phase: 0, timer: 0, belt: 0 };
 const CR_B0 = [1.1, 0, 0.62], CR_B1 = [4.4, 0, 2.3];      // conveyor tail and head (u, v, w)
@@ -57,7 +64,8 @@ const machines = [loader, truck, exc];
 let active = loader;
 let balls = [], rocks = [];
 const keys = { left: 0, right: 0, up: 0, down: 0, swl: 0, swr: 0 };
-const SNOW_OBST = [];   // later: buildings in the snow yard, each { x, y, h, rect: [u0, u1, vHalf] }
+const SNOW_OBST = [], DOORS = [];   // DOORS: oviaukot { horiz, plane, a0, a1 } (nosturi painuu matalaksi niiden kohdalla)
+   // later: buildings in the snow yard, each { x, y, h, rect: [u0, u1, vHalf] }
 
 function resetMachine(m, s) { Object.assign(m, { x: s.x, y: s.y, h: s.h, steer: 0, speed: 0, roll: 0, beep: 0, trackAcc: 0 }); }
 function reset() {
@@ -96,15 +104,22 @@ function reset() {
 }
 
 const acticon = document.getElementById('acticon');
-const mbtns = [...document.querySelectorAll('.mb[data-m]')];
+const mbtns = [...document.querySelectorAll('.mb[data-m]')], sbtns = [...document.querySelectorAll('.mb[data-s]')];
 function setActive(m) {
   active = m; acticon.setAttribute('d', m.icon);
   document.body.classList.toggle('exc', !!m.swingable);
   mbtns.forEach((b, i) => b.classList.toggle('sel', machines[i] === m));
+  sbtns.forEach((b, i) => b.classList.toggle('sel', snowMachines[i] === m));
+  if (scene === 'snow') {
+    const dv = m === david, sw = dv ? ['Käännä nosturia vasemmalle', 'Käännä nosturia oikealle'] : ['Käännä puhallusta vasemmalle', 'Käännä puhallusta oikealle'];
+    document.getElementById('swlb').setAttribute('aria-label', sw[0]); document.getElementById('swrb').setAttribute('aria-label', sw[1]);
+    document.getElementById('act').setAttribute('aria-label', dv ? 'Nosturi ylös tai alas' : 'Vaihda työkalu: linko, ei työkaluja tai puskulevy');
+  }
 }
-function nextMachine() { if (scene === 'snow') return; setActive(machines[(machines.indexOf(active) + 1) % machines.length]); }
+function nextMachine() { if (scene === 'snow') setActive(snowMachines[(snowMachines.indexOf(active) + 1) % snowMachines.length]); else setActive(machines[(machines.indexOf(active) + 1) % machines.length]); }
 function action() {
-  if (active === tractor) tractor.state = (tractor.state + 1) % 3;   // 0 linko alas + levy ylös (oletus), 1 molemmat ylös, 2 levy alas + linko ylös
+  if (active === david) david.cs = david.cs ? 0 : 1;                  // nosturi ylös <-> alas
+  else if (active === tractor) tractor.state = (tractor.state + 1) % 3;   // 0 linko alas + levy ylös (oletus), 1 molemmat ylös, 2 levy alas + linko ylös
   else if (active === loader) loader.state = (loader.state + 1) % 3;
   else if (active === truck) truck.state = (truck.state + 1) % 2;
   else if (exc.state < 4) exc.state++;
@@ -149,7 +164,8 @@ function drive(m, dt, on) {
   const prev = [m.x, m.y, m.h, m.steer], s0 = m.steer;
   m.swung = false;
   if (m.swingable && on && keys.swl !== keys.swr) {
-    m.swing += (keys.swl ? 1 : -1) * 0.9 * dt; m.swung = true;   // turn the upper structure with its own buttons
+    const sw0 = m.swing; m.swing += (keys.swl ? 1 : -1) * 0.9 * dt; m.swung = true;
+    if (m === david && scene === 'snow' && armHits(m.x, m.y, m.h, m.swing) && !armHits(m.x, m.y, m.h, sw0)) { m.swing = sw0; m.swung = false; if (m === active) bump(1.2); }   // nosturi ei käänny seinän läpi   // turn the upper structure with its own buttons
   }
   if (k.left && !k.right) m.steer = Math.min(m.maxSteer, m.steer + (m.art ? 0.9 : 1.5) * dt);
   else if (k.right && !k.left) m.steer = Math.max(-m.maxSteer, m.steer - (m.art ? 0.9 : 1.5) * dt);
@@ -171,7 +187,11 @@ function drive(m, dt, on) {
   m.x = Math.max(lo, Math.min(hi, m.x)); m.y = Math.max(loy, Math.min(hiy, m.y));
   if (snow) {                                              // buildings: a slight touch only slows the tractor, and it slides along the wall
     const r0 = m.rect, sm = [r0[0] + 0.3, r0[1] - 0.3, r0[2] - 0.25];
-    const blocked = (x, y, h) => { const q = { x, y, h, rect: sm }; for (const o of SNOW_OBST) if (hits(q, o)) return true; return false; };
+    const ot = m === tractor ? david : m === david ? tractor : null;   // the two tractors do not drive through each other
+    const blocked = (x, y, h) => { const q = { x, y, h, rect: sm }; for (const o of SNOW_OBST) if (hits(q, o)) return true; if (ot && hits(q, { x: ot.x, y: ot.y, h: ot.h, rect: [ot.rect[0] + 0.3, ot.rect[1] - 0.3, ot.rect[2] - 0.25] })) return true;
+      for (const b of BAGS) if (!b.held && b.z < 0.3) { const o = { x: b.x, y: b.y, h: 0, rect: [-0.5, 0.5, 0.5] }; if (hits(q, o) && !hits({ x: prev[0], y: prev[1], h: prev[2], rect: sm }, o)) return true; }   // wood bags on the ground are in the way (unless we already overlap one)
+      if (m === david && armHits(x, y, h, m.swing) && !armHits(prev[0], prev[1], prev[2], m.swing)) return true;   // nosturi osuu seinään
+      return false; };
     if (blocked(m.x, m.y, m.h)) {
       const nx = m.x, ny = m.y, nh = m.h, ns = m.steer;
       const tries = [[nx, prev[1], nh, ns], [prev[0], ny, nh, ns], [nx, ny, prev[2], prev[3]], [nx, prev[1], prev[2], prev[3]], [prev[0], ny, prev[2], prev[3]], [prev[0], prev[1], nh, ns]];

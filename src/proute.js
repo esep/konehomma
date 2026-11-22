@@ -39,9 +39,12 @@ function routeBarSet() {
 function routeStep(dt) {
   if (RT.win >= 0) { celebStep(dt); return; }
   if (RT.win === -2) {                              // reitti on valmis: nollaus vasta kun traktori on takaisin hallissa
-    const T = tractor;
-    if (T.x > gX(-92) && T.x < gX(-49) && T.y > gY(618) && T.y < gY(708)) routeReset();
-    return;
+    if (RT.done < RT.n) RT.win = -1;                // ilotulitus tulikin halkosäkeistä (pdavid.js): reitti jatkuu normaalisti
+    else {
+      const T = tractor;
+      if (T.x > gX(-92) && T.x < gX(-49) && T.y > gY(618) && T.y < gY(708)) routeReset();
+      return;
+    }
   }
   const T = tractor, R2 = RT_R * RT_R;
   if (T.bl > 0.5 && T.bw < 0.5) return;               // linko ja levy ylhäällä: ei aurata, joten reitti ei värjäänny

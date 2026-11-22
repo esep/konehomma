@@ -25,8 +25,10 @@ function render() {
     }
     ctx.fillStyle = 'rgba(30,44,90,0.3)';
     drawShadow(tractor, -3.95, 2.3, 1.3);
+    drawShadow(david, -2.2, 2.5, 1.2);
     drawFoxGround();
     drawRoute();
+    drawDavidGround();
   } else {
   ctx.drawImage(ground, OX, OY);
   for (const H of HOLES) ctx.drawImage(H.done ? H.patch : H.spr, OX + H.bx, OY + H.by);
@@ -56,9 +58,10 @@ function render() {
 
   const parts = [];
   beacons = []; lamps = [];
-  let tp = null;
+  let tp = null, dp = null;
   if (snowy) {
-    buildTractor(parts); tp = parts.slice(); foxParts(parts);
+    buildTractor(parts); tp = parts.slice();
+    buildDavid(parts); dp = parts.slice(tp.length); bagParts(parts); foxParts(parts);
     for (const t of TREES) {
       const q = P([t.x, t.y, 0]); if (q[0] < -50 || q[0] > IW + 50 || q[1] < -10 || q[1] > IH + 300) continue;
       const b = t.t === 'b';
@@ -66,7 +69,7 @@ function render() {
     }
     for (const st of STONES) { const q = P([st.x, st.y, 0]); if (q[0] < -40 || q[0] > IW + 40 || q[1] < -40 || q[1] > IH + 60) continue; const spr = ROCKSPR[st.s]; parts.push({ k: depth([st.x, st.y, 0.2 + st.lift]), deco: { p: [st.x, st.y], spr, ax: spr.width * st.sc / 2, ay: spr.height * st.sc * 0.8 + st.lift * ZH, sc: st.sc } }); }
     for (const list of [MINT, MPARTS]) for (const mp of list) {
-      if (mp.bi !== undefined) { const ca = HB[mp.bi].a; if (mp.vis === 'full' || mp.vis === 'roof' ? ca > 0.5 : ca <= 0.5) continue; mp._fa = mp.side === 'W' && tractor.x < HB[mp.bi].x0 || mp.side === 'N' && tractor.y < HB[mp.bi].y0; }   // a far wall is see-through when the tractor is outside it
+      if (mp.bi !== undefined) { const ca = HB[mp.bi].a; if (mp.vis === 'full' || mp.vis === 'roof' ? ca > 0.5 : ca <= 0.5) continue; mp._fa = mp.side === 'W' && active.x < HB[mp.bi].x0 || mp.side === 'N' && active.y < HB[mp.bi].y0; }   // a far wall is see-through when the tractor is outside it
       const q = P(mp.c), r = mp.rad * TW + 20;
       if (q[0] > -r && q[0] < IW + r && q[1] > -r - 90 && q[1] < IH + r + 90) parts.push(mp);
     }
@@ -140,9 +143,9 @@ function render() {
       ctx.closePath(); ctx.fill(); ctx.stroke();
     }
   }
-  if (snowy && tp && (occludedAt(tractor.x, tractor.y, 1.2) || occludedAt(tractor.x, tractor.y, 2.4))) {   // a building is in the way: show the tractor through it
+  for (const [m, ps] of [[tractor, tp], [david, dp]]) if (snowy && ps && (occludedAt(m.x, m.y, 1.2) || occludedAt(m.x, m.y, 2.4))) {   // a building is in the way: show the tractor through it
     ctx.globalAlpha = 0.55;
-    for (const p of tp) if (p.polys) for (const pl of p.polys) {
+    for (const p of ps) if (p.polys) for (const pl of p.polys) {
       const q = pl.pts; ctx.fillStyle = ctx.strokeStyle = pl.col; ctx.beginPath(); ctx.moveTo(q[0][0], q[0][1]);
       for (let i = 1; i < q.length; i++) ctx.lineTo(q[i][0], q[i][1]);
       ctx.closePath(); ctx.fill(); ctx.stroke();
@@ -185,16 +188,17 @@ function render() {
     ctx.fillRect(q[0] - (sz >> 1), q[1] - (sz >> 1), sz, sz);
   }
   ctx.globalAlpha = 1;
-  drawPointer(active);
-  if (snowy) drawCelebration();
+  if (active !== david) drawPointer(active);   // Davidilla ei pientä osoitinnuolta (säkki- ja ovinuolet riittävät)
+  if (snowy) { drawDavidGuide(); drawCelebration(); }
 }
 
 /* ---------- levels and the start menu ---------- */
 const hint = document.getElementById('hint');
-const HINT_SNOW = '<b>← → ↑ ↓</b> ajaminen · <b>välilyönti</b> työkalun vaihto · <b>Del PgDn</b> lingon suunta · <b>M</b> valikko';
+const HINT_SNOW = '<b>← → ↑ ↓</b> ajaminen · <b>välilyönti</b> työkalun vaihto · <b>Del PgDn</b> lingon suunta · <b class="num">1 2</b> traktori · <b>M</b> valikko';
+const HINT_DAVID = '<b>← → ↑ ↓</b> ajaminen · <b>välilyönti</b> nosturi alas / ylös · <b>Del PgDn</b> kääntö · <b class="num">1 2</b> traktori · <b>M</b> valikko';
 const hintYard = m => '<b>← → ↑ ↓</b> ajaminen · <b>välilyönti</b> ' + (m === truck ? 'lava' : 'kauha') + (m === exc ? ' · <b>Del PgDn</b> tornin kääntö' : '') + ' · <b class="num">1 2 3</b> vaihtaa konetta · <b>M</b> valikko';
 let hintKey = '';
-function hintStep() { const k = scene === 'snow' ? 'snow' : String(machines.indexOf(active)); if (k === hintKey) return; hintKey = k; hint.innerHTML = scene === 'snow' ? HINT_SNOW : hintYard(active); }
+function hintStep() { const k = scene === 'snow' ? (active === david ? 'snowD' : 'snow') : String(machines.indexOf(active)); if (k === hintKey) return; hintKey = k; hint.innerHTML = scene === 'snow' ? (active === david ? HINT_DAVID : HINT_SNOW) : hintYard(active); }
 hint.innerHTML = hintYard(active);
 let lastYard = null;
 function setScene(s) {
@@ -202,7 +206,7 @@ function setScene(s) {
   for (const k in keys) keys[k] = 0;
   M = s === 'snow' ? MS : 60; GW = M * TW; GH = M * TH;           // the Mikkola world is twice as wide as the pit
   if (s === 'snow') { if (!snowReady) initSnow(); lastYard = active; scene = 'snow'; setActive(tractor); }
-  else { scene = 'yard'; setActive(lastYard && lastYard !== tractor ? lastYard : loader); }
+  else { scene = 'yard'; setActive(lastYard && lastYard !== tractor && lastYard !== david ? lastYard : loader); }
   const sn = scene === 'snow';
   document.body.classList.toggle('snowmode', sn);
   camInit = false;
@@ -243,7 +247,7 @@ function showMenu() {
 cards.forEach(c => c.addEventListener('click', () => startLevel(c.dataset.lv, c)));
 document.getElementById('menubtn').addEventListener('click', e => { e.currentTarget.blur(); showMenu(); });
 cards[0].focus();
-function pickMachine(i) { firstInput(); if (scene === 'snow') return; setActive(machines[i]); }
+function pickMachine(i) { firstInput(); if (scene === 'snow') { if (snowMachines[i]) setActive(snowMachines[i]); return; } setActive(machines[i]); }
 const KEYMAP = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down', Delete: 'swl', PageDown: 'swr' };
 addEventListener('keydown', e => {
   if (!started) {
@@ -265,10 +269,9 @@ addEventListener('blur', () => { for (const k in keys) keys[k] = 0; });
 // tap or click a machine to drive it
 cv.addEventListener('pointerdown', e => {
   firstInput();
-  if (scene === 'snow') return;
   const r = cv.getBoundingClientRect(), ix = (e.clientX - r.left) / r.width * IW, iy = (e.clientY - r.top) / r.height * IH;
   let best = null, bd = 60;
-  for (const m of machines) {
+  for (const m of scene === 'snow' ? snowMachines : machines) {
     const q = P([m.x, m.y, 1.0]), d = Math.hypot(q[0] - ix, q[1] - iy);
     if (d < bd) { bd = d; best = m; }
   }
@@ -282,8 +285,8 @@ for (const el of document.querySelectorAll('.btn[data-k]')) {
   el.addEventListener('pointerdown', on);
   el.addEventListener('pointerup', off); el.addEventListener('pointercancel', off); el.addEventListener('lostpointercapture', off);
 }
-mbtns.forEach((b, i) => {
-  b.addEventListener('pointerdown', e => { e.preventDefault(); pickMachine(i); b.classList.add('on'); });
+[...mbtns, ...sbtns].forEach((b, i) => {
+  b.addEventListener('pointerdown', e => { e.preventDefault(); pickMachine(b.dataset.s !== undefined ? +b.dataset.s : +b.dataset.m); b.classList.add('on'); });
   for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(ev, () => b.classList.remove('on'));
 });
 const act = document.getElementById('act');
@@ -303,5 +306,5 @@ function frame(t) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.__game = { bumpN: () => bumpN, toolLog: () => Object.keys(TS).filter(k => TS[k]), bump, RT, FOX, FOXPR, foxStep, foxFree, HB, TREES, SNOW_OBST, setScene, keys, tractor, loader, truck, exc, CR, rocks, balls, action, gX, gY, startLevel: lv => startLevel(lv), snd: () => ({ loaded: Object.keys(SB), exc: Object.keys(EXB), st: curEng && curEng.st, eng: curEng && curEng.id, wind: !!wSrc, wl: wGain && wGain.gain.value, tg: tGain && tGain.gain.value, ac: AC && AC.state }) };
+window.__game = { david, BAGS: () => BAGS, craneTip, DSLOT, setActive, zoom: z => { ZOOM = z; resize(); }, bumpN: () => bumpN, toolLog: () => Object.keys(TS).filter(k => TS[k]), bump, RT, FOX, FOXPR, foxStep, foxFree, HB, TREES, SNOW_OBST, setScene, keys, tractor, loader, truck, exc, CR, rocks, balls, action, gX, gY, startLevel: lv => startLevel(lv), snd: () => ({ loaded: Object.keys(SB), exc: Object.keys(EXB), st: curEng && curEng.st, eng: curEng && curEng.id, wind: !!wSrc, wl: wGain && wGain.gain.value, tg: tGain && tGain.gain.value, ac: AC && AC.state }) };
 })();
