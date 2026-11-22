@@ -56,6 +56,15 @@ function updateDavid(dt) {
   D.cz = approach(D.cz, D.duck ? 1 : D.cs, 0.8 * dt);
   D.grip = approach(D.grip, D.held ? 0 : 1, 3 * dt);
   const G = craneTip(D), cg = craneGeo(D.cz);
+  const drv = Math.abs(D.speed) > 0.1, work = !!D.mode || D.cz > 0.05 || D.swung, rate = work ? 9 : drv ? 6 : 1.6, big = work || drv;   // pakokaasu kuten muilla koneilla
+  D.smk = (D.smk || 0) + rate * dt;
+  const hc = Math.cos(D.h), hs = Math.sin(D.h);
+  while (D.smk >= 1 && smoke.length < 160) {
+    D.smk -= 1;
+    smoke.push({ x: D.x + 1.35 * hc - 0.3 * hs, y: D.y + 1.35 * hs + 0.3 * hc, z: 2.5, vx: (Math.random() - 0.5) * 0.25 + 0.12, vy: (Math.random() - 0.5) * 0.25 - 0.08,
+      vz: 0.45 + Math.random() * 0.35 + (big ? 0.2 : 0), age: 0, life: 1.4 + Math.random() * 1.1, sz: big ? 4.5 : 3, a: big ? 0.85 : 0.6 });
+  }
+  if (D.smk >= 1) D.smk = 0;
   if (D.mode && D.cz > 0.97) {                                          // pohjalla: poimi tai laske, sitten nousu itsestään
     if (D.mode === 'pick') {
       let best = null, bd = 1.1;
@@ -130,7 +139,7 @@ function buildDavid(parts) {
   const rev = D.speed < -0.03 || (active === D && keys.down && D.speed < 0.2);
   plate([W(-1.805, -0.4, 0.58), W(-1.805, -0.1, 0.58), W(-1.805, -0.25, 0.82)], rev ? [255, 70, 60] : [232, 36, 40], 0.5, Dv(-1, 0, 0));
   if (rev) lamps.push({ col: 'rgba(255,40,30,0.16)', dot: 'rgba(255,90,70,0.7)', r: 5, p: W(-1.82, -0.25, 0.68), g0: W(-1.9, -0.25, 0), g1: W(-3.8, 0.35, 0), g2: W(-3.8, -0.85, 0) });
-  box(0.15, 0.35, 0.5, 0.7, 1.4, 2.32, DCOL.RD); box(0.12, 0.38, 0.47, 0.73, 2.32, 2.38, COL.DK);   // punainen pakoputki
+  box(1.25, 1.45, 0.2, 0.4, 1.5, 2.35, DCOL.RD); box(1.22, 1.48, 0.17, 0.43, 2.35, 2.42, COL.DK);   // punainen pakoputki konepellin päällä
   beacon(0.0, 0.5, DC.ROOF); lamp(0.1, 0.55, 2.3); lamp(0.1, -0.55, 2.3);
 
   // nosturi: kääntyvä jalusta katolla, kaksiosainen puomi, sylinterit, roikkuva tartuin

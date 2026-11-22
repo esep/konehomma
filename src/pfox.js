@@ -49,7 +49,7 @@ function foxVisit() {                                       // kettu kävelee ru
   for (let k = 0; k < 300; k++) {
     const l = Math.random() < 0.5, band = () => IH * (Math.random() < 0.5 ? 0.08 + Math.random() * 0.22 : 0.7 + Math.random() * 0.22), a = w(l ? -30 : IW + 30, band()), b = w(l ? IW + 30 : -30, band());
     let ok = a[0] > 2 && a[0] < 117 && a[1] > 2 && a[1] < 117 && b[0] > 2 && b[0] < 117 && b[1] > 2 && b[1] < 117;
-    for (let t = 0; ok && t <= 1; t += 0.02) { const x = a[0] + (b[0] - a[0]) * t, y = a[1] + (b[1] - a[1]) * t; if (!foxFree(x, y) || Math.hypot(x - T.x, y - T.y) < FOXC.SHY + 1) ok = false; }
+    for (let t = 0; ok && t <= 1; t += 0.02) { const x = a[0] + (b[0] - a[0]) * t, y = a[1] + (b[1] - a[1]) * t; if (!foxFree(x, y) || Math.hypot(x - T.x, y - T.y) < FOXC.SHY + 1 || Math.hypot(x - david.x, y - david.y) < FOXC.SHY + 1) ok = false; }
     if (!ok) continue;
     F.x = a[0]; F.y = a[1]; F.h = Math.atan2(b[1] - a[1], b[0] - a[0]); F.face = Math.sin(F.h) - Math.cos(F.h) >= 0 ? 1 : -1;
     F.flee = false; F.fleeT = 0; F.stride = 0; F.mv = 0;
@@ -58,11 +58,14 @@ function foxVisit() {                                       // kettu kävelee ru
   F.idle = F.nextAt - 4;                                    // ei sopivaa reittiä juuri nyt: yritä pian uudestaan
 }
 
+const foxNear = () => Math.hypot(FOX.x - david.x, FOX.y - david.y) < Math.hypot(FOX.x - tractor.x, FOX.y - tractor.y) ? david : tractor;   // lähin työkone (kettu väistää kaikkia)
+
 function foxStep(dt) {
   for (let i = FOXPR.length - 1; i >= 0; i--) { FOXPR[i].a += dt; if (FOXPR[i].a > FOXC.LIFE) FOXPR.splice(i, 1); }
-  const F = FOX, T = tractor;
+  const F = FOX;
   if (F.st === 'done') { F.idle += dt; if (F.idle > F.nextAt) foxVisit(); return; }      // käy välillä kylässä
-  if (F.st === 'wait') { if (T.y > HB[0].y1 + 1.0) foxSpawn(); return; }      // traktori on ajanut ulos hallista
+  if (F.st === 'wait') { if (tractor.y > HB[0].y1 + 1.0) foxSpawn(); return; }      // traktori on ajanut ulos hallista
+  const T = foxNear();
   F.t += dt; F.sniff += dt;
   const d = Math.hypot(F.x - T.x, F.y - T.y), lv = F.st === 'leave', wp = F.wp[F.wi];
   let sp = 0, dir = null;

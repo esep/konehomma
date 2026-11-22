@@ -146,7 +146,7 @@ body.snowmode .mb[data-s]{display:grid}
   </div>
   <div class="routebar" id="routebar" role="img" aria-label="Reittiä jäljellä"><i id="routefill"></i></div>
   <div class="hint" id="hint"></div>
-  <div class="ver">v2.9 · 22.11.2026</div>
+  <div class="ver">v2.11 · 22.11.2026</div>
   <button class="reset menub" id="menubtn" aria-label="Valikko"><svg viewBox="0 0 10 10"><path d="M1 2H9V3.4H1ZM1 4.3H9V5.7H1ZM1 6.6H9V8H1Z"/></svg><i class="mk">M</i></button>
   <button class="reset" id="reset" aria-label="Aloita alusta"><svg viewBox="0 0 10 10"><path d="M5 1A4 4 0 1 0 9 5H7.4A2.4 2.4 0 1 1 5 2.6V4.2L7.6 1.8L5 -0.6Z"/></svg></button>
 </div>
@@ -2424,6 +2424,15 @@ function updateDavid(dt) {
   D.cz = approach(D.cz, D.duck ? 1 : D.cs, 0.8 * dt);
   D.grip = approach(D.grip, D.held ? 0 : 1, 3 * dt);
   const G = craneTip(D), cg = craneGeo(D.cz);
+  const drv = Math.abs(D.speed) > 0.1, work = !!D.mode || D.cz > 0.05 || D.swung, rate = work ? 9 : drv ? 6 : 1.6, big = work || drv;   // pakokaasu kuten muilla koneilla
+  D.smk = (D.smk || 0) + rate * dt;
+  const hc = Math.cos(D.h), hs = Math.sin(D.h);
+  while (D.smk >= 1 && smoke.length < 160) {
+    D.smk -= 1;
+    smoke.push({ x: D.x + 1.35 * hc - 0.3 * hs, y: D.y + 1.35 * hs + 0.3 * hc, z: 2.5, vx: (Math.random() - 0.5) * 0.25 + 0.12, vy: (Math.random() - 0.5) * 0.25 - 0.08,
+      vz: 0.45 + Math.random() * 0.35 + (big ? 0.2 : 0), age: 0, life: 1.4 + Math.random() * 1.1, sz: big ? 4.5 : 3, a: big ? 0.85 : 0.6 });
+  }
+  if (D.smk >= 1) D.smk = 0;
   if (D.mode && D.cz > 0.97) {                                          // pohjalla: poimi tai laske, sitten nousu itsestään
     if (D.mode === 'pick') {
       let best = null, bd = 1.1;
@@ -2498,7 +2507,7 @@ function buildDavid(parts) {
   const rev = D.speed < -0.03 || (active === D && keys.down && D.speed < 0.2);
   plate([W(-1.805, -0.4, 0.58), W(-1.805, -0.1, 0.58), W(-1.805, -0.25, 0.82)], rev ? [255, 70, 60] : [232, 36, 40], 0.5, Dv(-1, 0, 0));
   if (rev) lamps.push({ col: 'rgba(255,40,30,0.16)', dot: 'rgba(255,90,70,0.7)', r: 5, p: W(-1.82, -0.25, 0.68), g0: W(-1.9, -0.25, 0), g1: W(-3.8, 0.35, 0), g2: W(-3.8, -0.85, 0) });
-  box(0.15, 0.35, 0.5, 0.7, 1.4, 2.32, DCOL.RD); box(0.12, 0.38, 0.47, 0.73, 2.32, 2.38, COL.DK);   // punainen pakoputki
+  box(1.25, 1.45, 0.2, 0.4, 1.5, 2.35, DCOL.RD); box(1.22, 1.48, 0.17, 0.43, 2.35, 2.42, COL.DK);   // punainen pakoputki konepellin päällä
   beacon(0.0, 0.5, DC.ROOF); lamp(0.1, 0.55, 2.3); lamp(0.1, -0.55, 2.3);
 
   // nosturi: kääntyvä jalusta katolla, kaksiosainen puomi, sylinterit, roikkuva tartuin
@@ -2826,7 +2835,7 @@ function foxVisit() {                                       // kettu kävelee ru
   for (let k = 0; k < 300; k++) {
     const l = Math.random() < 0.5, band = () => IH * (Math.random() < 0.5 ? 0.08 + Math.random() * 0.22 : 0.7 + Math.random() * 0.22), a = w(l ? -30 : IW + 30, band()), b = w(l ? IW + 30 : -30, band());
     let ok = a[0] > 2 && a[0] < 117 && a[1] > 2 && a[1] < 117 && b[0] > 2 && b[0] < 117 && b[1] > 2 && b[1] < 117;
-    for (let t = 0; ok && t <= 1; t += 0.02) { const x = a[0] + (b[0] - a[0]) * t, y = a[1] + (b[1] - a[1]) * t; if (!foxFree(x, y) || Math.hypot(x - T.x, y - T.y) < FOXC.SHY + 1) ok = false; }
+    for (let t = 0; ok && t <= 1; t += 0.02) { const x = a[0] + (b[0] - a[0]) * t, y = a[1] + (b[1] - a[1]) * t; if (!foxFree(x, y) || Math.hypot(x - T.x, y - T.y) < FOXC.SHY + 1 || Math.hypot(x - david.x, y - david.y) < FOXC.SHY + 1) ok = false; }
     if (!ok) continue;
     F.x = a[0]; F.y = a[1]; F.h = Math.atan2(b[1] - a[1], b[0] - a[0]); F.face = Math.sin(F.h) - Math.cos(F.h) >= 0 ? 1 : -1;
     F.flee = false; F.fleeT = 0; F.stride = 0; F.mv = 0;
@@ -2835,11 +2844,14 @@ function foxVisit() {                                       // kettu kävelee ru
   F.idle = F.nextAt - 4;                                    // ei sopivaa reittiä juuri nyt: yritä pian uudestaan
 }
 
+const foxNear = () => Math.hypot(FOX.x - david.x, FOX.y - david.y) < Math.hypot(FOX.x - tractor.x, FOX.y - tractor.y) ? david : tractor;   // lähin työkone (kettu väistää kaikkia)
+
 function foxStep(dt) {
   for (let i = FOXPR.length - 1; i >= 0; i--) { FOXPR[i].a += dt; if (FOXPR[i].a > FOXC.LIFE) FOXPR.splice(i, 1); }
-  const F = FOX, T = tractor;
+  const F = FOX;
   if (F.st === 'done') { F.idle += dt; if (F.idle > F.nextAt) foxVisit(); return; }      // käy välillä kylässä
-  if (F.st === 'wait') { if (T.y > HB[0].y1 + 1.0) foxSpawn(); return; }      // traktori on ajanut ulos hallista
+  if (F.st === 'wait') { if (tractor.y > HB[0].y1 + 1.0) foxSpawn(); return; }      // traktori on ajanut ulos hallista
+  const T = foxNear();
   F.t += dt; F.sniff += dt;
   const d = Math.hypot(F.x - T.x, F.y - T.y), lv = F.st === 'leave', wp = F.wp[F.wi];
   let sp = 0, dir = null;
