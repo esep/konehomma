@@ -25,6 +25,7 @@ function render() {
     }
     ctx.fillStyle = 'rgba(30,44,90,0.3)';
     drawShadow(tractor, -3.95, 2.3, 1.3);
+    drawFoxGround();
     drawRoute();
   } else {
   ctx.drawImage(ground, OX, OY);
@@ -57,7 +58,7 @@ function render() {
   beacons = []; lamps = [];
   let tp = null;
   if (snowy) {
-    buildTractor(parts); tp = parts.slice();
+    buildTractor(parts); tp = parts.slice(); foxParts(parts);
     for (const t of TREES) {
       const q = P([t.x, t.y, 0]); if (q[0] < -50 || q[0] > IW + 50 || q[1] < -10 || q[1] > IH + 300) continue;
       const b = t.t === 'b';
@@ -148,6 +149,7 @@ function render() {
     }
     ctx.globalAlpha = 1;
   }
+  if (snowy) foxGhost();
   // excavator (drawn over the ground pile): with a loaded, raised bucket the next press dumps it - show where it will land
   if (!snowy && exc.state === 3 && (exc.rock || exc.slots.some(Boolean))) {
     const g4 = excGeo(Object.assign({}, exc, { j: EXP[4].slice() })), dp = g4.loc(0.3, 0.2, 0), R0 = 0.95;
@@ -301,5 +303,5 @@ function frame(t) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.__game = { RT, setScene, keys, tractor, loader, truck, exc, CR, rocks, balls, action, gX, gY, startLevel: lv => startLevel(lv), snd: () => ({ loaded: Object.keys(SB), exc: Object.keys(EXB), st: curEng && curEng.st, eng: curEng && curEng.id, wind: !!wSrc, wl: wGain && wGain.gain.value, tg: tGain && tGain.gain.value, ac: AC && AC.state }) };
+window.__game = { bumpN: () => bumpN, toolLog: () => Object.keys(TS).filter(k => TS[k]), bump, RT, FOX, FOXPR, foxStep, foxFree, HB, TREES, SNOW_OBST, setScene, keys, tractor, loader, truck, exc, CR, rocks, balls, action, gX, gY, startLevel: lv => startLevel(lv), snd: () => ({ loaded: Object.keys(SB), exc: Object.keys(EXB), st: curEng && curEng.st, eng: curEng && curEng.id, wind: !!wSrc, wl: wGain && wGain.gain.value, tg: tGain && tGain.gain.value, ac: AC && AC.state }) };
 })();

@@ -24,24 +24,24 @@ const SLOTS = [];
 }
 
 const loader = {
-  kind: 'loader', icon: 'M1 2H3V8H9L10 6H11V9L10 10H2L1 9Z',
+  kind: 'loader', icon: 'M7 1H10V2H7ZM0 2H1V3H0ZM4 2H11V3H4ZM0 3H7V4H0ZM9 3H11V4H9ZM1 4H5V5H1ZM9 4H11V5H9ZM2 5H4V6H2ZM9 5H11V6H9ZM2 6H4V7H2ZM9 6H11V7H9ZM1 7H3V8H1ZM9 7H11V8H9ZM2 8H4V9H2ZM9 8H11V9H9ZM2 9H4V10H2ZM10 9H12V10H10ZM3 10H6V11H3ZM10 10H12V11H10ZM4 11H7V12H4ZM11 11H13V12H11ZM5 12H16V13H5ZM7 13H16V14H7Z',   // sivuprofiili 16x16 -ruudukossa
   art: true,   // frame-steered: steer is the bend angle at the centre joint, x/y is that joint, h is the rear frame heading
   rect: [-1.65, 1.3, 0.92], wb: 1.6, R: 0.45, tyre: 0.16, vmax: 2.3, vrev: 1.4, maxSteer: 0.6, top: 2.1,
   wheels: [[-0.8, 0.72, 0, 0], [-0.8, -0.72, 0, 0], [0.8, 0.72, 0, 1], [0.8, -0.72, 0, 1]]
 };
 const truck = {
-  kind: 'truck', icon: 'M1 9H8V7H10V5H11V10H1Z M2 6L7 2L8 3L3 7Z',
+  kind: 'truck', icon: 'M10 1H12V2H10ZM9 2H13V3H9ZM8 3H14V4H8ZM7 4H13V5H7ZM6 5H12V6H6ZM5 6H11V7H5ZM4 7H10V8H4ZM12 7H15V8H12ZM2 8H9V9H2ZM11 8H16V9H11ZM1 9H7V10H1ZM11 9H12V10H11ZM14 9H16V10H14ZM0 10H5V11H0ZM11 10H12V11H11ZM14 10H16V11H14ZM0 11H16V12H0ZM0 12H16V13H0ZM2 13H5V14H2ZM11 13H14V14H11ZM2 14H5V15H2ZM11 14H14V15H11Z',
   rect: [-2.15, 2.28, 1.0], wb: 2.8, R: 0.42, tyre: 0.16, vmax: 2.6, vrev: 1.4, maxSteer: 0.5, top: 2.1,
   wheels: [[1.45, 0.78, 1], [1.45, -0.78, 1], [-0.4, 0.78, 0], [-0.4, -0.78, 0], [-1.2, 0.78, 0], [-1.2, -0.78, 0]]
 };
 const exc = {
-  kind: 'exc', swingable: true, icon: 'M1 3H11V6L9 9H3L1 6Z M2 9V11H4V9Z M5 9V11H7V9Z M8 9V11H10V9Z',
+  kind: 'exc', swingable: true, icon: 'M7 1H10V2H7ZM0 2H1V3H0ZM4 2H11V3H4ZM0 3H7V4H0ZM9 3H11V4H9ZM1 4H5V5H1ZM9 4H11V5H9ZM2 5H4V6H2ZM9 5H11V6H9ZM2 6H4V7H2ZM9 6H11V7H9ZM1 7H3V8H1ZM9 7H11V8H9ZM2 8H4V9H2ZM9 8H11V9H9ZM2 9H4V10H2ZM10 9H12V10H10ZM3 10H6V11H3ZM10 10H12V11H10ZM4 11H7V12H4ZM11 11H13V12H11ZM5 12H16V13H5ZM7 13H16V14H7Z',
   rect: [-1.6, 1.3, 0.95], wb: 1.8, R: 0.42, tyre: 0.16, vmax: 2.2, vrev: 1.3, maxSteer: 0.5, top: 2.4,
   wheels: [[0.9, 0.72, 1], [0.9, -0.72, 1], [-0.9, 0.72, 0], [-0.9, -0.72, 0]]
 };
 // Orange tractor with a front loader push plate and a rear-mounted V-shaped snow blower (snow yard only). wheels: [u, v, steered, half width]
 const tractor = {
-  kind: 'tractor', icon: 'M3 1L6 4.5H4V8H2V4.5H0Z M9 11L12 7.5H10V4H8V7.5H6Z',
+  kind: 'tractor', icon: 'M4 1L8 5.5H5.5V10H2.5V5.5H0Z M12 15L16 10.5H13.5V6H10.5V10.5H8Z',
   rect: [-3.95, 2.3, 1.3], wb: 2.3, R: 0.62, tyre: 0.2, vmax: 2.4, vrev: 1.4, maxSteer: 0.62, top: 2.9,
   wheels: [[1.0, 0.8, 1, 0.14], [1.0, -0.8, 1, 0.14], [-0.85, 1.02, 0, 0.2], [-0.85, -1.02, 0, 0.2]]
 };
@@ -177,10 +177,11 @@ function drive(m, dt, on) {
       const tries = [[nx, prev[1], nh, ns], [prev[0], ny, nh, ns], [nx, ny, prev[2], prev[3]], [nx, prev[1], prev[2], prev[3]], [prev[0], ny, prev[2], prev[3]], [prev[0], prev[1], nh, ns]];
       let ok = false;
       for (const t of tries) if (!blocked(t[0], t[1], t[2])) { [m.x, m.y, m.h, m.steer] = t; ok = true; break; }
-      if (!ok) [m.x, m.y, m.h, m.steer] = prev;
+      if (!ok) { [m.x, m.y, m.h, m.steer] = prev; if (m === active) bump(Math.abs(m.speed)); }
+      if (ok && m === active) bump(Math.abs(m.speed) >= 1.0 ? Math.abs(m.speed) : 0);   // kovempi osuma seinään kuuluu, hipaisu ei
       m.speed *= ok ? 0.9 : 0.5;
     }
-  } else for (const o of [...machines, CR, ...HOLES.filter(H => !H.done)]) if (o !== m && hits(m, o)) { [m.x, m.y, m.h, m.steer] = prev; m.speed = 0; break; }
+  } else for (const o of [...machines, CR, ...HOLES.filter(H => !H.done)]) if (o !== m && hits(m, o)) { [m.x, m.y, m.h, m.steer] = prev; if (m === active) bump(Math.abs(m.speed)); m.speed = 0; break; }
   m.roll += m.speed * dt / m.R;
   m.trackAcc += Math.abs(m.speed) * dt;
   while (m.trackAcc >= 0.12) { m.trackAcc -= 0.12; if (snow) stampSnowTracks(m); else stampTracks(m); }

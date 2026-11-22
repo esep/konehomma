@@ -6,15 +6,34 @@ function loadSounds() {
   if (sndLoading || !AC) return; sndLoading = true;
   tGain = AC.createGain(); tGain.gain.value = 0; tGain.connect(master);
   wGain = AC.createGain(); wGain.gain.value = 0; wGain.connect(master);
+  const total = Object.keys(SND_DATA).length + Object.keys(SND_EXC).length + Object.keys(SND_TOOL).length; let done = 0;
+  const ld = document.getElementById('loading'), fin = () => { if (++done >= total && ld) ld.classList.remove('show'); };
+  setTimeout(() => { if (done < total && ld) ld.classList.add('show'); }, 2000);   // ladataan-animaatio vasta jos äänten lataus kestää yli 2 s
   const load = (data, bank) => { for (const k in data) {
     const bin = atob(data[k].split(',')[1]), u = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
-    const ok = b => { bank[k] = b; }, bad = () => {};
-    try { const p = AC.decodeAudioData(u.buffer, ok, bad); if (p && p.catch) p.catch(bad); } catch (e) {}
+    let once = false; const end = () => { if (!once) { once = true; fin(); } }, ok = b => { bank[k] = b; end(); }, bad = end;
+    try { const p = AC.decodeAudioData(u.buffer, ok, bad); if (p && p.catch) p.catch(bad); } catch (e) { bad(); }
   } };
-  load(SND_DATA, SB); load(SND_EXC, EXB);
+  load(SND_DATA, SB); load(SND_EXC, EXB); load(SND_TOOL, TB);
 }
 // one state machine per engine: idle -> start -> run -> decel -> idle (the excavator also has a digging rev)
+// työkaluäänet (kauha, levy, linko) ja törmäys: leikkeet Pixabay-äänistä; pidetään hiljaisina
+const TB = {}, TS = {}; let lastBump = -9, bumpN = 0;
+function toolSnd(key, name, on, vol, loop) {
+  if (!AC || !TB[name]) return; const o = TS[key], t = AC.currentTime;
+  if (on && !o) {
+    const s = AC.createBufferSource(); s.buffer = TB[name]; s.loop = !!loop; const g = AC.createGain(); g.gain.value = vol;
+    s.connect(g).connect(master); s.start(t); TS[key] = { s, g };
+  } else if (!on && o) {
+    o.g.gain.setTargetAtTime(0, t, 0.04); try { o.s.stop(t + 0.2); } catch (e) {} TS[key] = null;
+  }
+}
+function bump(sp) {                                  // törmäys: kone pysähtyi esteeseen
+  if (!AC || !TB.hit || sp < 0.6) return; const t = AC.currentTime; if (t - lastBump < 1.2) return; lastBump = t; bumpN++;
+  const s = AC.createBufferSource(); s.buffer = TB.hit; const g = AC.createGain(); g.gain.value = 0.4 + 0.45 * Math.min(1, sp / 3);
+  s.connect(g).connect(master); s.start(t);
+}
 const ENG = {}, EXB = {}; let curEng = null, excDig = false;
 function engOf(id, bank, pitch) { return ENG[id] || (ENG[id] = { id, bank, pitch, gm: id === 'exc' ? 1.45 : 1, st: 'idle', T: 0, still: 0, noDig: 0, ramp: 0, now: null }); }
 function tPlay(E, name, loop, fade) {
@@ -112,6 +131,10 @@ function update(dt) {
   if (tm > 1e-4) for (let i = 0; i < 3; i++) E.j[i] = approach(E.j[i], tgt[i], Math.abs(tgt[i] - E.j[i]) / tm * dt);
   E.tm = tm;
   const moving = Math.abs(L.alpha - a0) + Math.abs(L.beta - b0) + Math.abs(truck.tilt - t0) > 1e-4 || tm > 1e-3 || E.swung;
+  toolSnd('L', 'kauha', Math.abs(L.alpha - a0) + Math.abs(L.beta - b0) > 1e-4, 0.5);
+  toolSnd('T', 'kauha', Math.abs(truck.tilt - t0) > 1e-4, 0.5);
+  toolSnd('E', 'kauha', tm > 1e-3, 0.5);
+  toolSnd('Es', 'linko', !!E.swung, 0.45, true);
 
   excDig = tm > 1e-3 || !!E.swung;
   soundStep(dt, moving, 0);

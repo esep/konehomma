@@ -44,6 +44,7 @@ function routeStep(dt) {
     return;
   }
   const T = tractor, R2 = RT_R * RT_R;
+  if (T.bl > 0.5 && T.bw < 0.5) return;               // linko ja levy ylhäällä: ei aurata, joten reitti ei värjäänny
   for (const s of RT.lines) for (const p of s) {
     if (p.d) continue;
     const dx = p.x - T.x, dy = p.y - T.y;
