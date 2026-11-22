@@ -59,6 +59,8 @@ function routeStep(dt) {
 
 // katkoviiva maassa: tumma reunus, sen päällä punaiset (ajamatta) ja vihreät (ajetut) viivat
 function drawRoute() {
+  document.body.classList.toggle('davidmode', active === david);   // reitti ja palkki kuuluvat lumilinkotraktorille: piilossa kun David valittuna
+  if (active === david) return;
   const o = new Path2D(), r = new Path2D(), g = new Path2D();
   for (const s of RT.lines) {
     let prev = -2, pc = null;                       // edellinen piirretty pätkä ja sen väri: uusi alku aina kun jatkuvuus katkeaa (ruudun ulkopuolella olevat pisteet ohitetaan)

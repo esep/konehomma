@@ -55,6 +55,7 @@ body.touch .hint{display:none}
 .routebar{display:none;position:absolute;top:16px;left:50%;transform:translateX(-50%);width:min(34vw,300px);height:24px;border:3px solid var(--ink);border-radius:6px;
   background:#e5352b;box-shadow:0 4px 0 var(--ink);overflow:hidden;justify-content:flex-start;pointer-events:none}
 body.snowmode .routebar{display:flex}
+body.davidmode .routebar{display:none}
 .routebar i{display:block;height:100%;width:0;background:#38c850;box-shadow:inset 0 -5px 0 rgba(0,0,0,.18),inset 0 5px 0 rgba(255,255,255,.25);transition:width .25s linear}
 .reset{position:absolute;top:12px;right:max(12px,env(safe-area-inset-right,0px));width:40px;height:40px;padding:0;
   border:3px solid var(--ink);border-radius:6px;background:rgba(255,244,214,.75);display:grid;place-items:center;cursor:pointer}
@@ -145,7 +146,7 @@ body.snowmode .mb[data-s]{display:grid}
   </div>
   <div class="routebar" id="routebar" role="img" aria-label="Reittiä jäljellä"><i id="routefill"></i></div>
   <div class="hint" id="hint"></div>
-  <div class="ver">v2.8 · 22.11.2026</div>
+  <div class="ver">v2.9 · 22.11.2026</div>
   <button class="reset menub" id="menubtn" aria-label="Valikko"><svg viewBox="0 0 10 10"><path d="M1 2H9V3.4H1ZM1 4.3H9V5.7H1ZM1 6.6H9V8H1Z"/></svg><i class="mk">M</i></button>
   <button class="reset" id="reset" aria-label="Aloita alusta"><svg viewBox="0 0 10 10"><path d="M5 1A4 4 0 1 0 9 5H7.4A2.4 2.4 0 1 1 5 2.6V4.2L7.6 1.8L5 -0.6Z"/></svg></button>
 </div>
@@ -2658,6 +2659,8 @@ function routeStep(dt) {
 
 // katkoviiva maassa: tumma reunus, sen päällä punaiset (ajamatta) ja vihreät (ajetut) viivat
 function drawRoute() {
+  document.body.classList.toggle('davidmode', active === david);   // reitti ja palkki kuuluvat lumilinkotraktorille: piilossa kun David valittuna
+  if (active === david) return;
   const o = new Path2D(), r = new Path2D(), g = new Path2D();
   for (const s of RT.lines) {
     let prev = -2, pc = null;                       // edellinen piirretty pätkä ja sen väri: uusi alku aina kun jatkuvuus katkeaa (ruudun ulkopuolella olevat pisteet ohitetaan)
