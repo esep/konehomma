@@ -145,7 +145,7 @@ body.snowmode .mb[data-s]{display:grid}
   </div>
   <div class="routebar" id="routebar" role="img" aria-label="Reittiä jäljellä"><i id="routefill"></i></div>
   <div class="hint" id="hint"></div>
-  <div class="ver">v2.7 · 22.11.2026</div>
+  <div class="ver">v2.8 · 22.11.2026</div>
   <button class="reset menub" id="menubtn" aria-label="Valikko"><svg viewBox="0 0 10 10"><path d="M1 2H9V3.4H1ZM1 4.3H9V5.7H1ZM1 6.6H9V8H1Z"/></svg><i class="mk">M</i></button>
   <button class="reset" id="reset" aria-label="Aloita alusta"><svg viewBox="0 0 10 10"><path d="M5 1A4 4 0 1 0 9 5H7.4A2.4 2.4 0 1 1 5 2.6V4.2L7.6 1.8L5 -0.6Z"/></svg></button>
 </div>
@@ -600,7 +600,7 @@ function setActive(m) {
 }
 function nextMachine() { if (scene === 'snow') setActive(snowMachines[(snowMachines.indexOf(active) + 1) % snowMachines.length]); else setActive(machines[(machines.indexOf(active) + 1) % machines.length]); }
 function action() {
-  if (active === david) david.cs = david.cs ? 0 : 1;                  // nosturi ylös <-> alas
+  if (active === david) davidAction();                                 // nosturi: poimi ylös / laske maahan ja nouse itsestään
   else if (active === tractor) tractor.state = (tractor.state + 1) % 3;   // 0 linko alas + levy ylös (oletus), 1 molemmat ylös, 2 levy alas + linko ylös
   else if (active === loader) loader.state = (loader.state + 1) % 3;
   else if (active === truck) truck.state = (truck.state + 1) % 2;
@@ -2381,7 +2381,7 @@ let BAGS = [];
 
 function davidReset() {
   resetMachine(david, START_D);
-  Object.assign(david, { swing: 0, cs: 0, cz: 0, grip: 1, held: null, lock: false, smk: 0 });
+  Object.assign(david, { swing: 0, cs: 0, cz: 0, grip: 1, held: null, mode: null, smk: 0 });
   BAGS = BAG_START.map(([x, y]) => ({ x, y, z: 0 }));
   DV.cel = false;
 }
@@ -2415,20 +2415,21 @@ function craneGeo(cz) {                                                 // kaksi
 const bagInSlot = (b, S) => !b.held && b.z < 0.05 && Math.abs(b.x - S.x) < S.hw && Math.abs(b.y - S.y) < S.hd;
 const bagDone = b => DSLOT.some(S => bagInSlot(b, S));
 
+function davidAction() { if (david.mode) return; david.mode = david.held ? 'drop' : 'pick'; david.cs = 1; }   // yksi nappi: poimi ylös / laske maahan
+
 function updateDavid(dt) {
   const D = david, cz0 = D.cz;
   D.duck = inDoorway(D.x, D.y, D.h, D.swing);                           // oviaukossa nosturi painuu itsestään matalaksi
   D.cz = approach(D.cz, D.duck ? 1 : D.cs, 0.8 * dt);
   D.grip = approach(D.grip, D.held ? 0 : 1, 3 * dt);
-  if (D.cz < 0.6) D.lock = false;
   const G = craneTip(D), cg = craneGeo(D.cz);
-  if (!D.held && !D.lock && D.cz > 0.97) {                              // laskettu säkin kohdalle: tarttuu
-    let best = null, bd = 0.9;
-    for (const b of BAGS) { const d = Math.hypot(b.x - G.x, b.y - G.y); if (d < bd) { bd = d; best = b; } }
-    if (best) { D.held = best; best.held = true; oneShot('kiinni', 0.55); }
-  }
-  if (D.held && D.cz > 0.9 && !D.duck && (Math.abs(D.speed) > 0.2 || D.swung)) {  // lähdettiin liikkeelle nosturi alhaalla: säkki irtoaa ja jää paikalleen
-    D.held.held = false; D.held.z = 0; D.held = null; D.lock = true; oneShot('irti', 0.5);
+  if (D.mode && D.cz > 0.97) {                                          // pohjalla: poimi tai laske, sitten nousu itsestään
+    if (D.mode === 'pick') {
+      let best = null, bd = 1.1;
+      for (const b of BAGS) { const d = Math.hypot(b.x - G.x, b.y - G.y); if (d < bd) { bd = d; best = b; } }
+      if (best) { D.held = best; best.held = true; oneShot('kiinni', 0.55); }
+    } else if (D.held) { D.held.held = false; D.held.z = 0; D.held = null; oneShot('irti', 0.5); }
+    D.mode = null; D.cs = 0;
   }
   if (D.held) { D.held.x = G.x; D.held.y = G.y; D.held.z = Math.max(0, cg.wf - DC.WDN); }
   for (let i = 0; i < BAGS.length; i++) {                               // maassa olevat säkit eivät mene päällekkäin
@@ -2446,7 +2447,7 @@ function updateDavid(dt) {
   toolSnd('Ds', 'linko', !!D.swung, 0.45, true);                        // tornin pyöritys: sama ääni kuin kaivurin tornilla
   // kaikki kolme paikkaa täynnä: ilotulitus (sama kuin reitin valmistuessa), sitten säkit takaisin alkuun
   if (!DV.cel && !D.held && DSLOT.every(S => BAGS.some(b => bagInSlot(b, S))) && RT.win === -1) { DV.cel = true; RT.win = 0; RT.nextRk = 0; jingle(true); }
-  if (DV.cel && RT.win < 0) { DV.cel = false; BAGS = BAG_START.map(([x, y]) => ({ x, y, z: 0 })); D.held = null; D.lock = false; }
+  if (DV.cel && RT.win < 0) { DV.cel = false; BAGS = BAG_START.map(([x, y]) => ({ x, y, z: 0 })); D.held = null; D.mode = null; D.cs = 0; }
   return Math.abs(D.cz - cz0) > 1e-4 || !!D.swung;
 }
 
@@ -2570,7 +2571,7 @@ function drawDavidGround() {
     ctx.lineWidth = 2.5; ctx.strokeStyle = ok ? '#38c850' : '#e5352b'; ctx.stroke();
   }
   if (!D.held) {                                                        // rengas: tähän tartunta osuu; vihreä kun säkki on tarttuvissa
-    const on = BAGS.some(b => Math.hypot(b.x - G.x, b.y - G.y) < 0.9);
+    const on = BAGS.some(b => Math.hypot(b.x - G.x, b.y - G.y) < 1.1);
     ctx.beginPath(); for (let i = 0; i <= 24; i++) { const an = i / 24 * 6.283, q = P([G.x + Math.cos(an) * 0.6, G.y + Math.sin(an) * 0.6, 0.03]); i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); }
     ctx.setLineDash([5, 4]); ctx.lineDashOffset = -time * 10; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(28,16,22,0.45)'; ctx.stroke();
     ctx.lineWidth = 2.5; ctx.strokeStyle = on ? '#38c850' : '#fff6d8'; ctx.stroke();
@@ -2582,12 +2583,6 @@ function drawDavidGround() {
 function drawDavidGuide() {
   if (active !== david || RT.win >= 0) return;
   const D = david; let tx, ty, near = 4;
-  if (D.held && D.cz > 0.9 && D.cs > 0.5 && !D.duck) {                     // tarttui kiinni: nuoli ylös säkin kohdalla (nosta!)
-    const q = P([D.held.x, D.held.y, D.held.z + 2.3 + Math.sin(time * 7) * 0.25]);
-    ctx.save(); ctx.translate(Math.round(q[0]), Math.round(q[1])); ctx.lineJoin = 'miter';
-    ctx.beginPath(); ctx.moveTo(0, -17); ctx.lineTo(-14, -2); ctx.lineTo(-6, -2); ctx.lineTo(-6, 14); ctx.lineTo(6, 14); ctx.lineTo(6, -2); ctx.lineTo(14, -2); ctx.closePath();
-    ctx.lineWidth = 5; ctx.strokeStyle = '#2a2420'; ctx.stroke(); ctx.fillStyle = '#ffd866'; ctx.fill(); ctx.restore();
-  }
   if (D.held) { tx = DRY_C[0]; ty = DRY_C[1]; near = 6; }
   else {
     let bd = 1e9; for (const b of BAGS) if (!bagDone(b)) { const d = Math.hypot(b.x - D.x, b.y - D.y); if (d < bd) { bd = d; tx = b.x; ty = b.y; } }
@@ -3154,7 +3149,7 @@ function render() {
 /* ---------- levels and the start menu ---------- */
 const hint = document.getElementById('hint');
 const HINT_SNOW = '<b>← → ↑ ↓</b> ajaminen · <b>välilyönti</b> työkalun vaihto · <b>Del PgDn</b> lingon suunta · <b class="num">1 2</b> traktori · <b>M</b> valikko';
-const HINT_DAVID = '<b>← → ↑ ↓</b> ajaminen · <b>välilyönti</b> nosturi alas / ylös · <b>Del PgDn</b> kääntö · <b class="num">1 2</b> traktori · <b>M</b> valikko';
+const HINT_DAVID = '<b>← → ↑ ↓</b> ajaminen · <b>välilyönti</b> poimi / laske · <b>Del PgDn</b> kääntö · <b class="num">1 2</b> traktori · <b>M</b> valikko';
 const hintYard = m => '<b>← → ↑ ↓</b> ajaminen · <b>välilyönti</b> ' + (m === truck ? 'lava' : 'kauha') + (m === exc ? ' · <b>Del PgDn</b> tornin kääntö' : '') + ' · <b class="num">1 2 3</b> vaihtaa konetta · <b>M</b> valikko';
 let hintKey = '';
 function hintStep() { const k = scene === 'snow' ? (active === david ? 'snowD' : 'snow') : String(machines.indexOf(active)); if (k === hintKey) return; hintKey = k; hint.innerHTML = scene === 'snow' ? (active === david ? HINT_DAVID : HINT_SNOW) : hintYard(active); }

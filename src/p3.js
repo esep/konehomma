@@ -118,7 +118,7 @@ function setActive(m) {
 }
 function nextMachine() { if (scene === 'snow') setActive(snowMachines[(snowMachines.indexOf(active) + 1) % snowMachines.length]); else setActive(machines[(machines.indexOf(active) + 1) % machines.length]); }
 function action() {
-  if (active === david) david.cs = david.cs ? 0 : 1;                  // nosturi ylös <-> alas
+  if (active === david) davidAction();                                 // nosturi: poimi ylös / laske maahan ja nouse itsestään
   else if (active === tractor) tractor.state = (tractor.state + 1) % 3;   // 0 linko alas + levy ylös (oletus), 1 molemmat ylös, 2 levy alas + linko ylös
   else if (active === loader) loader.state = (loader.state + 1) % 3;
   else if (active === truck) truck.state = (truck.state + 1) % 2;

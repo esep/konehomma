@@ -14,7 +14,7 @@ let BAGS = [];
 
 function davidReset() {
   resetMachine(david, START_D);
-  Object.assign(david, { swing: 0, cs: 0, cz: 0, grip: 1, held: null, lock: false, smk: 0 });
+  Object.assign(david, { swing: 0, cs: 0, cz: 0, grip: 1, held: null, mode: null, smk: 0 });
   BAGS = BAG_START.map(([x, y]) => ({ x, y, z: 0 }));
   DV.cel = false;
 }
@@ -48,20 +48,21 @@ function craneGeo(cz) {                                                 // kaksi
 const bagInSlot = (b, S) => !b.held && b.z < 0.05 && Math.abs(b.x - S.x) < S.hw && Math.abs(b.y - S.y) < S.hd;
 const bagDone = b => DSLOT.some(S => bagInSlot(b, S));
 
+function davidAction() { if (david.mode) return; david.mode = david.held ? 'drop' : 'pick'; david.cs = 1; }   // yksi nappi: poimi ylös / laske maahan
+
 function updateDavid(dt) {
   const D = david, cz0 = D.cz;
   D.duck = inDoorway(D.x, D.y, D.h, D.swing);                           // oviaukossa nosturi painuu itsestään matalaksi
   D.cz = approach(D.cz, D.duck ? 1 : D.cs, 0.8 * dt);
   D.grip = approach(D.grip, D.held ? 0 : 1, 3 * dt);
-  if (D.cz < 0.6) D.lock = false;
   const G = craneTip(D), cg = craneGeo(D.cz);
-  if (!D.held && !D.lock && D.cz > 0.97) {                              // laskettu säkin kohdalle: tarttuu
-    let best = null, bd = 0.9;
-    for (const b of BAGS) { const d = Math.hypot(b.x - G.x, b.y - G.y); if (d < bd) { bd = d; best = b; } }
-    if (best) { D.held = best; best.held = true; oneShot('kiinni', 0.55); }
-  }
-  if (D.held && D.cz > 0.9 && !D.duck && (Math.abs(D.speed) > 0.2 || D.swung)) {  // lähdettiin liikkeelle nosturi alhaalla: säkki irtoaa ja jää paikalleen
-    D.held.held = false; D.held.z = 0; D.held = null; D.lock = true; oneShot('irti', 0.5);
+  if (D.mode && D.cz > 0.97) {                                          // pohjalla: poimi tai laske, sitten nousu itsestään
+    if (D.mode === 'pick') {
+      let best = null, bd = 1.1;
+      for (const b of BAGS) { const d = Math.hypot(b.x - G.x, b.y - G.y); if (d < bd) { bd = d; best = b; } }
+      if (best) { D.held = best; best.held = true; oneShot('kiinni', 0.55); }
+    } else if (D.held) { D.held.held = false; D.held.z = 0; D.held = null; oneShot('irti', 0.5); }
+    D.mode = null; D.cs = 0;
   }
   if (D.held) { D.held.x = G.x; D.held.y = G.y; D.held.z = Math.max(0, cg.wf - DC.WDN); }
   for (let i = 0; i < BAGS.length; i++) {                               // maassa olevat säkit eivät mene päällekkäin
@@ -79,7 +80,7 @@ function updateDavid(dt) {
   toolSnd('Ds', 'linko', !!D.swung, 0.45, true);                        // tornin pyöritys: sama ääni kuin kaivurin tornilla
   // kaikki kolme paikkaa täynnä: ilotulitus (sama kuin reitin valmistuessa), sitten säkit takaisin alkuun
   if (!DV.cel && !D.held && DSLOT.every(S => BAGS.some(b => bagInSlot(b, S))) && RT.win === -1) { DV.cel = true; RT.win = 0; RT.nextRk = 0; jingle(true); }
-  if (DV.cel && RT.win < 0) { DV.cel = false; BAGS = BAG_START.map(([x, y]) => ({ x, y, z: 0 })); D.held = null; D.lock = false; }
+  if (DV.cel && RT.win < 0) { DV.cel = false; BAGS = BAG_START.map(([x, y]) => ({ x, y, z: 0 })); D.held = null; D.mode = null; D.cs = 0; }
   return Math.abs(D.cz - cz0) > 1e-4 || !!D.swung;
 }
 
@@ -203,7 +204,7 @@ function drawDavidGround() {
     ctx.lineWidth = 2.5; ctx.strokeStyle = ok ? '#38c850' : '#e5352b'; ctx.stroke();
   }
   if (!D.held) {                                                        // rengas: tähän tartunta osuu; vihreä kun säkki on tarttuvissa
-    const on = BAGS.some(b => Math.hypot(b.x - G.x, b.y - G.y) < 0.9);
+    const on = BAGS.some(b => Math.hypot(b.x - G.x, b.y - G.y) < 1.1);
     ctx.beginPath(); for (let i = 0; i <= 24; i++) { const an = i / 24 * 6.283, q = P([G.x + Math.cos(an) * 0.6, G.y + Math.sin(an) * 0.6, 0.03]); i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); }
     ctx.setLineDash([5, 4]); ctx.lineDashOffset = -time * 10; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(28,16,22,0.45)'; ctx.stroke();
     ctx.lineWidth = 2.5; ctx.strokeStyle = on ? '#38c850' : '#fff6d8'; ctx.stroke();
@@ -215,12 +216,6 @@ function drawDavidGround() {
 function drawDavidGuide() {
   if (active !== david || RT.win >= 0) return;
   const D = david; let tx, ty, near = 4;
-  if (D.held && D.cz > 0.9 && D.cs > 0.5 && !D.duck) {                     // tarttui kiinni: nuoli ylös säkin kohdalla (nosta!)
-    const q = P([D.held.x, D.held.y, D.held.z + 2.3 + Math.sin(time * 7) * 0.25]);
-    ctx.save(); ctx.translate(Math.round(q[0]), Math.round(q[1])); ctx.lineJoin = 'miter';
-    ctx.beginPath(); ctx.moveTo(0, -17); ctx.lineTo(-14, -2); ctx.lineTo(-6, -2); ctx.lineTo(-6, 14); ctx.lineTo(6, 14); ctx.lineTo(6, -2); ctx.lineTo(14, -2); ctx.closePath();
-    ctx.lineWidth = 5; ctx.strokeStyle = '#2a2420'; ctx.stroke(); ctx.fillStyle = '#ffd866'; ctx.fill(); ctx.restore();
-  }
   if (D.held) { tx = DRY_C[0]; ty = DRY_C[1]; near = 6; }
   else {
     let bd = 1e9; for (const b of BAGS) if (!bagDone(b)) { const d = Math.hypot(b.x - D.x, b.y - D.y); if (d < bd) { bd = d; tx = b.x; ty = b.y; } }
