@@ -306,5 +306,5 @@ function frame(t) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.__game = { flakes, bankN: () => bankN, david, BAGS: () => BAGS, craneTip, DSLOT, setActive, zoom: z => { ZOOM = z; resize(); }, bumpN: () => bumpN, toolLog: () => Object.keys(TS).filter(k => TS[k]), bump, RT, FOX, FOXPR, foxStep, foxFree, HB, TREES, SNOW_OBST, setScene, keys, tractor, loader, truck, exc, CR, rocks, balls, action, gX, gY, startLevel: lv => startLevel(lv), snd: () => ({ loaded: Object.keys(SB), exc: Object.keys(EXB), st: curEng && curEng.st, eng: curEng && curEng.id, wind: !!wSrc, wl: wGain && wGain.gain.value, tg: tGain && tGain.gain.value, ac: AC && AC.state }) };
+window.__game = { DOORS, HB, flakes, bankN: () => bankN, david, BAGS: () => BAGS, craneTip, DSLOT, setActive, zoom: z => { ZOOM = z; resize(); }, bumpN: () => bumpN, toolLog: () => Object.keys(TS).filter(k => TS[k]), bump, RT, FOX, FOXPR, foxStep, foxFree, HB, TREES, SNOW_OBST, setScene, keys, tractor, loader, truck, exc, CR, rocks, balls, action, gX, gY, startLevel: lv => startLevel(lv), snd: () => ({ loaded: Object.keys(SB), exc: Object.keys(EXB), st: curEng && curEng.st, eng: curEng && curEng.id, wind: !!wSrc, wl: wGain && wGain.gain.value, tg: tGain && tGain.gain.value, ac: AC && AC.state }) };
 })();

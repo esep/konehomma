@@ -140,10 +140,12 @@ function flakeWall(f, ox, oy) {                // a thrown flake hits a wall: on
     if (!(f.x > b.x0 && f.x < b.x1 && f.y > b.y0 && f.y < b.y1) || (ox > b.x0 && ox < b.x1 && oy > b.y0 && oy < b.y1)) continue;
     const face = ox >= b.x1 ? 'x1' : oy >= b.y1 ? 'y1' : ox <= b.x0 ? 'x0' : 'y0';
     if (f.z > wallTop(b, face[0], face[0] === 'x' ? f.y : f.x)) continue;     // above the wall: flies over
+    const al = face[0] === 'x' ? f.y : f.x, pl = face === 'x1' ? b.x1 - 0.18 : face === 'x0' ? b.x0 + 0.18 : face === 'y1' ? b.y1 - 0.18 : b.y0 + 0.18;
+    if (DOORS.some(d => d.horiz === (face[0] === 'y') && Math.abs(d.plane - pl) < 0.03 && al > d.a0 && al < d.a1 && f.z < d.z1)) continue;     // a doorway the tractor can drive through: the snow flies in
     const vis = face === 'x1' || face === 'y1', out = 0.3 + Math.random() * 0.5;
-    if (vis && !f.d && Math.random() < 0.4) {
-      f.vx = f.vy = f.vz = 0; f.n = face; f.s = 1.5 + Math.random() * 6.5;
-      const j = (Math.random() - 0.5) * 0.5; f.z = Math.max(0.1, f.z + (Math.random() - 0.5) * 0.3);   // the lump splats a little
+    if (vis && !f.d && Math.random() < 0.25) {
+      f.vx = f.vy = f.vz = 0; f.n = face; f.s = 2.5 + Math.random() * 7.5;
+      const j = (Math.random() - 0.5) * 0.7; f.z = Math.max(0.15, Math.min(wallTop(b, face[0], face[0] === 'x' ? f.y : f.x) - 0.15, f.z + (Math.random() - 0.5) * 1.8));   // the lump splats a little
       if (face === 'x1') f.y = Math.min(b.y1 - 0.05, Math.max(b.y0 + 0.05, f.y + j)); else f.x = Math.min(b.x1 - 0.05, Math.max(b.x0 + 0.05, f.x + j));
       if (face === 'x1') { f.x = b.x1 + 0.03; f.sk = b.x1 + f.y + 0.7; } else { f.y = b.y1 + 0.03; f.sk = b.y1 + f.x + 0.7; }
     } else {
