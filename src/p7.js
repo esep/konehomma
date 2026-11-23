@@ -196,7 +196,7 @@ function render() {
 const hint = document.getElementById('hint');
 const HINT_SNOW = '<b>← → ↑ ↓</b> ajaminen · <b>välilyönti</b> työkalun vaihto · <b>Del PgDn</b> lingon suunta · <b class="num">1 2</b> traktori · <b>M</b> valikko';
 const HINT_DAVID = '<b>← → ↑ ↓</b> ajaminen · <b>välilyönti</b> poimi / laske · <b>Del PgDn</b> kääntö · <b class="num">1 2</b> traktori · <b>M</b> valikko';
-const hintYard = m => '<b>← → ↑ ↓</b> ajaminen · <b>välilyönti</b> ' + (m === truck ? 'lava' : 'kauha') + (m === exc ? ' · <b>Del PgDn</b> tornin kääntö' : '') + ' · <b class="num">1 2 3</b> vaihtaa konetta · <b>M</b> valikko';
+const hintYard = m => '<b>← → ↑ ↓</b> ajaminen · <b>välilyönti</b> ' + (m === truck ? 'lava' : m === exc ? 'kaiva / tiputa' : 'kauha') + (m === exc ? ' · <b>Del PgDn</b> tornin kääntö' : '') + ' · <b class="num">1 2 3</b> vaihtaa konetta · <b>M</b> valikko';
 let hintKey = '';
 function hintStep() { const k = scene === 'snow' ? (active === david ? 'snowD' : 'snow') : String(machines.indexOf(active)); if (k === hintKey) return; hintKey = k; hint.innerHTML = scene === 'snow' ? (active === david ? HINT_DAVID : HINT_SNOW) : hintYard(active); }
 hint.innerHTML = hintYard(active);

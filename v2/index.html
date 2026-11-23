@@ -146,7 +146,7 @@ body.snowmode .mb[data-s]{display:grid}
   </div>
   <div class="routebar" id="routebar" role="img" aria-label="Reittiä jäljellä"><i id="routefill"></i></div>
   <div class="hint" id="hint"></div>
-  <div class="ver">v2.13 · 23.11.2026</div>
+  <div class="ver">v2.14 · 23.11.2026</div>
   <button class="reset menub" id="menubtn" aria-label="Valikko"><svg viewBox="0 0 10 10"><path d="M1 2H9V3.4H1ZM1 4.3H9V5.7H1ZM1 6.6H9V8H1Z"/></svg><i class="mk">M</i></button>
   <button class="reset" id="reset" aria-label="Aloita alusta"><svg viewBox="0 0 10 10"><path d="M5 1A4 4 0 1 0 9 5H7.4A2.4 2.4 0 1 1 5 2.6V4.2L7.6 1.8L5 -0.6Z"/></svg></button>
 </div>
@@ -605,7 +605,8 @@ function action() {
   else if (active === tractor) tractor.state = (tractor.state + 1) % 3;   // 0 linko alas + levy ylös (oletus), 1 molemmat ylös, 2 levy alas + linko ylös
   else if (active === loader) loader.state = (loader.state + 1) % 3;
   else if (active === truck) truck.state = (truck.state + 1) % 2;
-  else if (exc.state < 4) exc.state++;
+  else if (exc.state === 0) exc.state = 1;                              // kaivuri: 1. painallus kauhaisee maasta (laskee, kauhaisee, nousee itsestään)
+  else if (exc.state === 3) exc.state = 4;                              // 2. painallus tiputtaa kauhan sisällön, kauha jää ylös
 }
 function excGeo(E) {
   const [B, S, K] = E.j, c = Math.cos(E.h + E.swing), s = Math.sin(E.h + E.swing);
@@ -1047,6 +1048,8 @@ function update(dt) {
         E.slots[slot] = b; b.st = 'ebkt'; b.lt = 0; b.sx = b.x; b.sy = b.y; b.sz = b.z; plop();
       }
     }
+    if (E.state === 1 && tm < 1e-3) E.state = 2;                 // down -> scoop -> up with the load, all by itself
+    else if (E.state === 2 && tm < 1e-3) E.state = 3;
     if (E.state === 4 && tm < 1e-3) {         // after dumping, go back to the start pose
       E.wait += dt;
       if (E.wait > 0.5 && !E.slots.some(Boolean)) { E.state = 0; E.wait = 0; }
@@ -3199,7 +3202,7 @@ function render() {
 const hint = document.getElementById('hint');
 const HINT_SNOW = '<b>← → ↑ ↓</b> ajaminen · <b>välilyönti</b> työkalun vaihto · <b>Del PgDn</b> lingon suunta · <b class="num">1 2</b> traktori · <b>M</b> valikko';
 const HINT_DAVID = '<b>← → ↑ ↓</b> ajaminen · <b>välilyönti</b> poimi / laske · <b>Del PgDn</b> kääntö · <b class="num">1 2</b> traktori · <b>M</b> valikko';
-const hintYard = m => '<b>← → ↑ ↓</b> ajaminen · <b>välilyönti</b> ' + (m === truck ? 'lava' : 'kauha') + (m === exc ? ' · <b>Del PgDn</b> tornin kääntö' : '') + ' · <b class="num">1 2 3</b> vaihtaa konetta · <b>M</b> valikko';
+const hintYard = m => '<b>← → ↑ ↓</b> ajaminen · <b>välilyönti</b> ' + (m === truck ? 'lava' : m === exc ? 'kaiva / tiputa' : 'kauha') + (m === exc ? ' · <b>Del PgDn</b> tornin kääntö' : '') + ' · <b class="num">1 2 3</b> vaihtaa konetta · <b>M</b> valikko';
 let hintKey = '';
 function hintStep() { const k = scene === 'snow' ? (active === david ? 'snowD' : 'snow') : String(machines.indexOf(active)); if (k === hintKey) return; hintKey = k; hint.innerHTML = scene === 'snow' ? (active === david ? HINT_DAVID : HINT_SNOW) : hintYard(active); }
 hint.innerHTML = hintYard(active);

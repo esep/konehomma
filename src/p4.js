@@ -227,6 +227,8 @@ function update(dt) {
         E.slots[slot] = b; b.st = 'ebkt'; b.lt = 0; b.sx = b.x; b.sy = b.y; b.sz = b.z; plop();
       }
     }
+    if (E.state === 1 && tm < 1e-3) E.state = 2;                 // down -> scoop -> up with the load, all by itself
+    else if (E.state === 2 && tm < 1e-3) E.state = 3;
     if (E.state === 4 && tm < 1e-3) {         // after dumping, go back to the start pose
       E.wait += dt;
       if (E.wait > 0.5 && !E.slots.some(Boolean)) { E.state = 0; E.wait = 0; }

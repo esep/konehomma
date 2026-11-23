@@ -122,7 +122,8 @@ function action() {
   else if (active === tractor) tractor.state = (tractor.state + 1) % 3;   // 0 linko alas + levy ylös (oletus), 1 molemmat ylös, 2 levy alas + linko ylös
   else if (active === loader) loader.state = (loader.state + 1) % 3;
   else if (active === truck) truck.state = (truck.state + 1) % 2;
-  else if (exc.state < 4) exc.state++;
+  else if (exc.state === 0) exc.state = 1;                              // kaivuri: 1. painallus kauhaisee maasta (laskee, kauhaisee, nousee itsestään)
+  else if (exc.state === 3) exc.state = 4;                              // 2. painallus tiputtaa kauhan sisällön, kauha jää ylös
 }
 function excGeo(E) {
   const [B, S, K] = E.j, c = Math.cos(E.h + E.swing), s = Math.sin(E.h + E.swing);
