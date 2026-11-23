@@ -146,7 +146,7 @@ body.snowmode .mb[data-s]{display:grid}
   </div>
   <div class="routebar" id="routebar" role="img" aria-label="Reittiä jäljellä"><i id="routefill"></i></div>
   <div class="hint" id="hint"></div>
-  <div class="ver">v2.11 · 22.11.2026</div>
+  <div class="ver">v2.12 · 23.11.2026</div>
   <button class="reset menub" id="menubtn" aria-label="Valikko"><svg viewBox="0 0 10 10"><path d="M1 2H9V3.4H1ZM1 4.3H9V5.7H1ZM1 6.6H9V8H1Z"/></svg><i class="mk">M</i></button>
   <button class="reset" id="reset" aria-label="Aloita alusta"><svg viewBox="0 0 10 10"><path d="M5 1A4 4 0 1 0 9 5H7.4A2.4 2.4 0 1 1 5 2.6V4.2L7.6 1.8L5 -0.6Z"/></svg></button>
 </div>
@@ -2191,6 +2191,31 @@ function chuteOut() {                          // where the snow leaves the chut
   return [T.x + u * c - v * s, T.y + u * s + v * c, 1.4, T.h + a];
 }
 
+function wallTop(b, face, a) {                 // height of the wall at coordinate a along it (the gable end is higher in the middle)
+  if (face === 'x') return b.ax === 'x' ? b.e + (b.r - b.e) * (1 - Math.abs(a - (b.y0 + b.y1) / 2) / ((b.y1 - b.y0) / 2)) : b.e;
+  return b.ax === 'y' ? b.e + (b.r - b.e) * (1 - Math.abs(a - (b.x0 + b.x1) / 2) / ((b.x1 - b.x0) / 2)) : b.e;
+}
+function flakeWall(f, ox, oy) {                // a thrown flake hits a wall: on the walls we can see (x1, y1) 40 % of the flakes stick for a while, the rest drop down to a pile
+  for (const b of HB) {
+    if (!(f.x > b.x0 && f.x < b.x1 && f.y > b.y0 && f.y < b.y1) || (ox > b.x0 && ox < b.x1 && oy > b.y0 && oy < b.y1)) continue;
+    const face = ox >= b.x1 ? 'x1' : oy >= b.y1 ? 'y1' : ox <= b.x0 ? 'x0' : 'y0';
+    if (f.z > wallTop(b, face[0], face[0] === 'x' ? f.y : f.x)) continue;     // above the wall: flies over
+    const vis = face === 'x1' || face === 'y1', out = 0.3 + Math.random() * 0.5;
+    if (vis && !f.d && Math.random() < 0.4) {
+      f.vx = f.vy = f.vz = 0; f.n = face; f.s = 1.5 + Math.random() * 6.5;
+      const j = (Math.random() - 0.5) * 0.5; f.z = Math.max(0.1, f.z + (Math.random() - 0.5) * 0.3);   // the lump splats a little
+      if (face === 'x1') f.y = Math.min(b.y1 - 0.05, Math.max(b.y0 + 0.05, f.y + j)); else f.x = Math.min(b.x1 - 0.05, Math.max(b.x0 + 0.05, f.x + j));
+      if (face === 'x1') { f.x = b.x1 + 0.03; f.sk = b.x1 + f.y + 0.7; } else { f.y = b.y1 + 0.03; f.sk = b.y1 + f.x + 0.7; }
+    } else {
+      f.vz = Math.min(f.vz, 0);
+      if (face === 'x1') { f.x = b.x1 + 0.05; f.vx = out; f.vy *= 0.2; }
+      else if (face === 'y1') { f.y = b.y1 + 0.05; f.vy = out; f.vx *= 0.2; }
+      else if (face === 'x0') { f.x = b.x0 - 0.05; f.vx = -out; f.vy *= 0.2; }
+      else { f.y = b.y0 - 0.05; f.vy = -out; f.vx *= 0.2; }
+    }
+    return;
+  }
+}
 function updateSnow(dt) {
   time += dt;
   const T = tractor, D = david, TA = active === T;
@@ -2261,7 +2286,14 @@ function updateSnow(dt) {
   }
   for (let i = flakes.length - 1; i >= 0; i--) {
     const f = flakes[i];
+    if (f.s !== undefined) {                   // stuck on a wall: waits a random time, then lets go and drops to the ground
+      f.s -= dt;
+      if (f.s > 0) continue;
+      delete f.s; delete f.sk; f.vz = 0; if (f.n === 'x1') f.vx = 0.4; else f.vy = 0.4;
+    }
+    const ox = f.x, oy = f.y;
     f.vz -= 8 * dt; f.x += f.vx * dt; f.y += f.vy * dt; f.z += f.vz * dt;
+    if (f.z > 0) flakeWall(f, ox, oy);
     if (f.z <= 0) { if (!f.d) addBank(f.x, f.y); flakes[i] = flakes[flakes.length - 1]; flakes.pop(); }
   }
 
@@ -3075,11 +3107,11 @@ function render() {
     for (const r of rocks) parts.push({ k: r.st === 'lbkt' && LKC > -1e8 ? LKC : r.st === 'ebkt' && EKC > -1e8 ? EKC : depth([r.x, r.y, r.z]) + (r.st === 'lbkt' || r.st === 'ebkt' ? 0.45 : 0.05), rock: r });
     for (const d of DECO) parts.push({ k: depth([d.p[0], d.p[1], 0.2]), deco: d });
   }
-  if (snowy) for (const f of flakes) parts.push({ k: f.x + f.y + 0.3 * f.z, flake: f });     // thrown snow is sorted with the buildings, so roofs cover it
+  if (snowy) for (const f of flakes) parts.push({ k: f.sk !== undefined ? f.sk : f.x + f.y + 0.3 * f.z, flake: f });     // thrown snow is sorted with the buildings, so roofs cover it
   parts.sort((a, b) => a.k - b.k);
   ctx.lineWidth = 1; ctx.lineJoin = 'round';
   for (const p of parts) {
-    if (p.flake) { const f = p.flake, q = P([f.x, f.y, f.z]), sz = f.d ? 1 : 2; ctx.fillStyle = f.c ? '#ffffff' : '#cfdcf0'; ctx.fillRect(q[0], q[1], sz, sz); continue; }
+    if (p.flake) { const f = p.flake, q = P([f.x, f.y, f.z]), sz = f.d ? 1 : 2; ctx.fillStyle = f.c || f.sk !== undefined ? '#ffffff' : '#cfdcf0'; ctx.fillRect(q[0], q[1], sz, sz); continue; }
     if (p.wp) {
       const fa = p._fa, ra = p.rb !== undefined ? 1 - 0.65 * (HB[p.rb].fa || 0) : 1; if (fa) ctx.globalAlpha = 0.4; else if (ra < 1) ctx.globalAlpha = ra;
       for (const pl of p.polys) {
@@ -3275,7 +3307,7 @@ function frame(t) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.__game = { david, BAGS: () => BAGS, craneTip, DSLOT, setActive, zoom: z => { ZOOM = z; resize(); }, bumpN: () => bumpN, toolLog: () => Object.keys(TS).filter(k => TS[k]), bump, RT, FOX, FOXPR, foxStep, foxFree, HB, TREES, SNOW_OBST, setScene, keys, tractor, loader, truck, exc, CR, rocks, balls, action, gX, gY, startLevel: lv => startLevel(lv), snd: () => ({ loaded: Object.keys(SB), exc: Object.keys(EXB), st: curEng && curEng.st, eng: curEng && curEng.id, wind: !!wSrc, wl: wGain && wGain.gain.value, tg: tGain && tGain.gain.value, ac: AC && AC.state }) };
+window.__game = { flakes, bankN: () => bankN, david, BAGS: () => BAGS, craneTip, DSLOT, setActive, zoom: z => { ZOOM = z; resize(); }, bumpN: () => bumpN, toolLog: () => Object.keys(TS).filter(k => TS[k]), bump, RT, FOX, FOXPR, foxStep, foxFree, HB, TREES, SNOW_OBST, setScene, keys, tractor, loader, truck, exc, CR, rocks, balls, action, gX, gY, startLevel: lv => startLevel(lv), snd: () => ({ loaded: Object.keys(SB), exc: Object.keys(EXB), st: curEng && curEng.st, eng: curEng && curEng.id, wind: !!wSrc, wl: wGain && wGain.gain.value, tg: tGain && tGain.gain.value, ac: AC && AC.state }) };
 })();
 
 </script></body></html>

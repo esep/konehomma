@@ -106,11 +106,11 @@ function render() {
     for (const r of rocks) parts.push({ k: r.st === 'lbkt' && LKC > -1e8 ? LKC : r.st === 'ebkt' && EKC > -1e8 ? EKC : depth([r.x, r.y, r.z]) + (r.st === 'lbkt' || r.st === 'ebkt' ? 0.45 : 0.05), rock: r });
     for (const d of DECO) parts.push({ k: depth([d.p[0], d.p[1], 0.2]), deco: d });
   }
-  if (snowy) for (const f of flakes) parts.push({ k: f.x + f.y + 0.3 * f.z, flake: f });     // thrown snow is sorted with the buildings, so roofs cover it
+  if (snowy) for (const f of flakes) parts.push({ k: f.sk !== undefined ? f.sk : f.x + f.y + 0.3 * f.z, flake: f });     // thrown snow is sorted with the buildings, so roofs cover it
   parts.sort((a, b) => a.k - b.k);
   ctx.lineWidth = 1; ctx.lineJoin = 'round';
   for (const p of parts) {
-    if (p.flake) { const f = p.flake, q = P([f.x, f.y, f.z]), sz = f.d ? 1 : 2; ctx.fillStyle = f.c ? '#ffffff' : '#cfdcf0'; ctx.fillRect(q[0], q[1], sz, sz); continue; }
+    if (p.flake) { const f = p.flake, q = P([f.x, f.y, f.z]), sz = f.d ? 1 : 2; ctx.fillStyle = f.c || f.sk !== undefined ? '#ffffff' : '#cfdcf0'; ctx.fillRect(q[0], q[1], sz, sz); continue; }
     if (p.wp) {
       const fa = p._fa, ra = p.rb !== undefined ? 1 - 0.65 * (HB[p.rb].fa || 0) : 1; if (fa) ctx.globalAlpha = 0.4; else if (ra < 1) ctx.globalAlpha = ra;
       for (const pl of p.polys) {
@@ -306,5 +306,5 @@ function frame(t) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.__game = { david, BAGS: () => BAGS, craneTip, DSLOT, setActive, zoom: z => { ZOOM = z; resize(); }, bumpN: () => bumpN, toolLog: () => Object.keys(TS).filter(k => TS[k]), bump, RT, FOX, FOXPR, foxStep, foxFree, HB, TREES, SNOW_OBST, setScene, keys, tractor, loader, truck, exc, CR, rocks, balls, action, gX, gY, startLevel: lv => startLevel(lv), snd: () => ({ loaded: Object.keys(SB), exc: Object.keys(EXB), st: curEng && curEng.st, eng: curEng && curEng.id, wind: !!wSrc, wl: wGain && wGain.gain.value, tg: tGain && tGain.gain.value, ac: AC && AC.state }) };
+window.__game = { flakes, bankN: () => bankN, david, BAGS: () => BAGS, craneTip, DSLOT, setActive, zoom: z => { ZOOM = z; resize(); }, bumpN: () => bumpN, toolLog: () => Object.keys(TS).filter(k => TS[k]), bump, RT, FOX, FOXPR, foxStep, foxFree, HB, TREES, SNOW_OBST, setScene, keys, tractor, loader, truck, exc, CR, rocks, balls, action, gX, gY, startLevel: lv => startLevel(lv), snd: () => ({ loaded: Object.keys(SB), exc: Object.keys(EXB), st: curEng && curEng.st, eng: curEng && curEng.id, wind: !!wSrc, wl: wGain && wGain.gain.value, tg: tGain && tGain.gain.value, ac: AC && AC.state }) };
 })();

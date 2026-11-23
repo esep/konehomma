@@ -131,6 +131,31 @@ function chuteOut() {                          // where the snow leaves the chut
   return [T.x + u * c - v * s, T.y + u * s + v * c, 1.4, T.h + a];
 }
 
+function wallTop(b, face, a) {                 // height of the wall at coordinate a along it (the gable end is higher in the middle)
+  if (face === 'x') return b.ax === 'x' ? b.e + (b.r - b.e) * (1 - Math.abs(a - (b.y0 + b.y1) / 2) / ((b.y1 - b.y0) / 2)) : b.e;
+  return b.ax === 'y' ? b.e + (b.r - b.e) * (1 - Math.abs(a - (b.x0 + b.x1) / 2) / ((b.x1 - b.x0) / 2)) : b.e;
+}
+function flakeWall(f, ox, oy) {                // a thrown flake hits a wall: on the walls we can see (x1, y1) 40 % of the flakes stick for a while, the rest drop down to a pile
+  for (const b of HB) {
+    if (!(f.x > b.x0 && f.x < b.x1 && f.y > b.y0 && f.y < b.y1) || (ox > b.x0 && ox < b.x1 && oy > b.y0 && oy < b.y1)) continue;
+    const face = ox >= b.x1 ? 'x1' : oy >= b.y1 ? 'y1' : ox <= b.x0 ? 'x0' : 'y0';
+    if (f.z > wallTop(b, face[0], face[0] === 'x' ? f.y : f.x)) continue;     // above the wall: flies over
+    const vis = face === 'x1' || face === 'y1', out = 0.3 + Math.random() * 0.5;
+    if (vis && !f.d && Math.random() < 0.4) {
+      f.vx = f.vy = f.vz = 0; f.n = face; f.s = 1.5 + Math.random() * 6.5;
+      const j = (Math.random() - 0.5) * 0.5; f.z = Math.max(0.1, f.z + (Math.random() - 0.5) * 0.3);   // the lump splats a little
+      if (face === 'x1') f.y = Math.min(b.y1 - 0.05, Math.max(b.y0 + 0.05, f.y + j)); else f.x = Math.min(b.x1 - 0.05, Math.max(b.x0 + 0.05, f.x + j));
+      if (face === 'x1') { f.x = b.x1 + 0.03; f.sk = b.x1 + f.y + 0.7; } else { f.y = b.y1 + 0.03; f.sk = b.y1 + f.x + 0.7; }
+    } else {
+      f.vz = Math.min(f.vz, 0);
+      if (face === 'x1') { f.x = b.x1 + 0.05; f.vx = out; f.vy *= 0.2; }
+      else if (face === 'y1') { f.y = b.y1 + 0.05; f.vy = out; f.vx *= 0.2; }
+      else if (face === 'x0') { f.x = b.x0 - 0.05; f.vx = -out; f.vy *= 0.2; }
+      else { f.y = b.y0 - 0.05; f.vy = -out; f.vx *= 0.2; }
+    }
+    return;
+  }
+}
 function updateSnow(dt) {
   time += dt;
   const T = tractor, D = david, TA = active === T;
@@ -201,7 +226,14 @@ function updateSnow(dt) {
   }
   for (let i = flakes.length - 1; i >= 0; i--) {
     const f = flakes[i];
+    if (f.s !== undefined) {                   // stuck on a wall: waits a random time, then lets go and drops to the ground
+      f.s -= dt;
+      if (f.s > 0) continue;
+      delete f.s; delete f.sk; f.vz = 0; if (f.n === 'x1') f.vx = 0.4; else f.vy = 0.4;
+    }
+    const ox = f.x, oy = f.y;
     f.vz -= 8 * dt; f.x += f.vx * dt; f.y += f.vy * dt; f.z += f.vz * dt;
+    if (f.z > 0) flakeWall(f, ox, oy);
     if (f.z <= 0) { if (!f.d) addBank(f.x, f.y); flakes[i] = flakes[flakes.length - 1]; flakes.pop(); }
   }
 
