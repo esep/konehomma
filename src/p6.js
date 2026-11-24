@@ -59,6 +59,7 @@ function resetSnow(first) {
   flakes.length = 0; smoke.length = 0;
   resetMachine(tractor, START_S);
   Object.assign(tractor, { state: 0, bl: 1, bw: 1, rpm: 0, aug: 0, chute: Math.PI / 2, clr: 0, pclr: 0, pile: 0, em: 0, smk: 0 });
+  toolsReset();
   davidReset();
   camInit = false;
   routeReset(); foxReset();
@@ -135,14 +136,15 @@ function wallTop(b, face, a) {                 // height of the wall at coordina
   if (face === 'x') return b.ax === 'x' ? b.e + (b.r - b.e) * (1 - Math.abs(a - (b.y0 + b.y1) / 2) / ((b.y1 - b.y0) / 2)) : b.e;
   return b.ax === 'y' ? b.e + (b.r - b.e) * (1 - Math.abs(a - (b.x0 + b.x1) / 2) / ((b.x1 - b.x0) / 2)) : b.e;
 }
+let HBW = null;
 function flakeWall(f, ox, oy) {                // a thrown flake hits a wall: on the walls we can see (x1, y1) 40 % of the flakes stick for a while, the rest drop down to a pile
-  for (const b of HB) {
+  for (const b of HBW || (HBW = HB.concat(GLH))) {
     if (!(f.x > b.x0 && f.x < b.x1 && f.y > b.y0 && f.y < b.y1) || (ox > b.x0 && ox < b.x1 && oy > b.y0 && oy < b.y1)) continue;
     const face = ox >= b.x1 ? 'x1' : oy >= b.y1 ? 'y1' : ox <= b.x0 ? 'x0' : 'y0';
     if (f.z > wallTop(b, face[0], face[0] === 'x' ? f.y : f.x)) continue;     // above the wall: flies over
     const al = face[0] === 'x' ? f.y : f.x, pl = face === 'x1' ? b.x1 - 0.18 : face === 'x0' ? b.x0 + 0.18 : face === 'y1' ? b.y1 - 0.18 : b.y0 + 0.18;
     if (DOORS.some(d => d.horiz === (face[0] === 'y') && Math.abs(d.plane - pl) < 0.03 && al > d.a0 && al < d.a1 && f.z < d.z1)) continue;     // a doorway the tractor can drive through: the snow flies in
-    const vis = face === 'x1' || face === 'y1', out = 0.3 + Math.random() * 0.5;
+    const vis = (face === 'x1' || face === 'y1') && !b.glass, out = 0.3 + Math.random() * 0.5;
     if (vis && !f.d && Math.random() < 0.25) {
       f.vx = f.vy = f.vz = 0; f.n = face; f.s = 2.5 + Math.random() * 7.5;
       const j = (Math.random() - 0.5) * 0.7; f.z = Math.max(0.15, Math.min(wallTop(b, face[0], face[0] === 'x' ? f.y : f.x) - 0.15, f.z + (Math.random() - 0.5) * 1.8));   // the lump splats a little
@@ -173,17 +175,16 @@ function updateSnow(dt) {
   drive(T, dt, TA); drive(D, dt, !TA);
   routeStep(dt);
   foxStep(dt);
-  const bl0 = T.bl, ch0 = T.chute;
-  const bw0 = T.bw;
-  T.bl = approach(T.bl, T.state === 2 ? 0 : 1, 1.4 * dt);      // loader plate: 1 = raised, 0 = lowered
-  T.bw = approach(T.bw, T.state === 0 ? 1 : 0, 1.4 * dt);      // rear blower: 1 = lowered (works), 0 = raised
-  if (TA && keys.swl !== keys.swr) T.chute = Math.max(CH_MIN, Math.min(CH_MAX, T.chute + (keys.swl ? 1 : -1) * 1.1 * dt));      // only the rear half circle: never towards the front
-  const moving = T.bl !== bl0 || T.bw !== bw0 || T.chute !== ch0;
-  toolSnd('Tl', 'levy', T.bl !== bl0, 0.5); toolSnd('Tw', 'linko', T.bw !== bw0, 0.5);
+  const ch0 = T.chute;
+  toolStep(dt);                                                  // peräkärry seuraa, kytkentä, välilyönnin pito
+  const tm = toolTargets(dt);                                    // etutyökalun varret (1 = levy ylhäällä), kauhan kallistus, linko (1 = alhaalla), kärryn kippaus
+  if (TA && T.rr === 'blower' && keys.swl !== keys.swr) T.chute = Math.max(CH_MIN, Math.min(CH_MAX, T.chute + (keys.swl ? 1 : -1) * 1.1 * dt));      // only the rear half circle: never towards the front
+  const moving = tm || T.chute !== ch0;
   const indoors = inBld(T.x, T.y) || inBld(T.x - 3 * Math.cos(T.h), T.y - 3 * Math.sin(T.h));   // no blowing inside a building
-  T.rpm = approach(T.rpm, T.bl > 0.7 && T.bw > 0.7 && !indoors ? 1 : 0, 4 * dt);   // the blower only runs lowered and with the plate up
+  T.rpm = approach(T.rpm, T.rr === 'blower' && T.fr === 'plate' && T.bl > 0.7 && T.bw > 0.7 && !indoors ? 1 : 0, 4 * dt);   // the blower only runs lowered and with the plate up
   T.aug += T.rpm * 14 * dt;
   const c = Math.cos(T.h), s = Math.sin(T.h), L2W = (u, v) => [T.x + u * c - v * s, T.y + u * s + v * c];
+  toolWork(dt, L2W);                                               // kauhan kauhaisu ja kippaus, kärryn kippaus
 
   if (T.rpm > 0.5 && T.speed > 0.05) {         // rear blower cuts the snow behind the tractor and throws it
     let sn = 0;
@@ -208,7 +209,7 @@ function updateSnow(dt) {
     }
   } else { T.clr = 0; T.em = 0; }
 
-  if (T.bl < 0.15 && T.speed > 0.05) {         // plate lowered: it pushes the snow ahead of it, the blower stays quiet
+  if (T.fr === 'plate' && T.bl < 0.15 && T.speed > 0.05) {         // plate lowered: it pushes the snow ahead of it, the blower stays quiet
     T.pclr += T.speed * dt;
     const front = snowAt(...L2W(PL_U1 + 0.2, 0)) || snowAt(...L2W(PL_U1 + 0.2, 0.7)) || snowAt(...L2W(PL_U1 + 0.2, -0.7));
     while (T.pclr >= 0.1) {
@@ -235,6 +236,7 @@ function updateSnow(dt) {
     }
     const ox = f.x, oy = f.y;
     f.vz -= 8 * dt; f.x += f.vx * dt; f.y += f.vy * dt; f.z += f.vz * dt;
+    if (bedHit(f)) { flakes[i] = flakes[flakes.length - 1]; flakes.pop(); continue; }     // lumi putosi kärryn lavalle
     if (f.z > 0) flakeWall(f, ox, oy);
     if (f.z <= 0) { if (!f.d) addBank(f.x, f.y); flakes[i] = flakes[flakes.length - 1]; flakes.pop(); }
   }
@@ -276,6 +278,7 @@ function buildTractor(parts) {
   box(-1.38, -0.02, -0.74, 0.74, 1.2, 2.25, COL.GL);              // cab glass
   for (const [a, b] of [[-1.45, -1.33], [-0.07, 0.05]]) for (const sg of [1, -1]) box(a, b, ...sv(0.7, 0.78, sg), 1.2, 2.25, COL.ORG);   // pillars
   // side skin, door and windows: the door ends just ahead of the rear wheel, the glass is a trapezoid and a triangle over the wheel
+  const skinK = {};
   for (const sg of [1, -1]) {                                    // one part per side, so the glass can never sort behind the skin
     const out = Dv(0, sg, 0); if (!vis(out)) continue;
     const polys = [], sp = (pts, col, v) => {
@@ -288,11 +291,15 @@ function buildTractor(parts) {
     sp([[0.0, 1.42], [-0.62, 1.42], [-0.5, 2.18], [-0.17, 2.18]], COL.GL, 0.8);              // door glass
     sp([[-0.82, 1.5], [-0.82, 2.18], [-1.38, 2.18]], COL.GL, 0.8);                           // quarter window over the rear wheel
     sp([[-0.66, 1.26], [-0.46, 1.26], [-0.46, 1.32], [-0.66, 1.32]], COL.DK2, 0.8);          // door handle
-    parts.push({ k: depth(W(-0.7, sg * 0.79, 1.7)) + 0.1, polys });
+    parts.push({ k: skinK[sg] = depth(W(-0.7, sg * 0.79, 1.7)) + 0.1, polys });
   }
   box(-1.55, 0.1, -0.86, 0.86, 2.25, 2.38, COL.ROOF);             // roof
   box(-1.2, -0.6, -0.3, 0.3, 2.38, 2.44, COL.DK2);                // roof vent
-  for (const sg of [1, -1]) box(-1.6, -0.1, ...sv(0.84, 1.24, sg), 1.34, 1.42, COL.FEND, 0.05);   // mudguards
+  for (const sg of [1, -1]) {                                      // mudguards: the near one is drawn over the cab side skin
+    const m0 = parts.length;
+    box(-1.6, -0.1, ...sv(0.84, 1.24, sg), 1.34, 1.42, COL.FEND, 0.05);
+    if (skinK[sg] !== undefined) for (let i = m0; i < parts.length; i++) parts[i].k = Math.max(parts[i].k, skinK[sg] + 0.05);
+  }
   box(-1.7, -1.5, -0.6, 0.6, 0.5, 0.9, COL.DK);                   // rear weight
   const rev = T.speed < -0.03 || (active === T && keys.down && T.speed < 0.2);
   plate([W(-1.705, -0.4, 0.58), W(-1.705, -0.1, 0.58), W(-1.705, -0.25, 0.82)], rev ? [255, 70, 60] : [232, 36, 40], 0.5, Dv(-1, 0, 0));
@@ -318,30 +325,7 @@ function buildTractor(parts) {
     // the loader arm on the side nearer to the viewer lies in front of the exhaust stack
     if (depth(W(1.0, sg * 0.58, 1.8)) > depth(W(1.05, 0.35, 1.8))) for (let i = lp0 + 1; i < parts.length; i++) parts[i].k = Math.max(parts[i].k, stackK + 0.05);
   }
-  box(pu - 0.12, pu, -0.65, 0.65, pz + 0.3, pz + 0.38, COL.LDR);
-  box(pu, pu + 0.08, -1.0, 1.0, pz + 0.05, pz + 0.6, COL.BLW);    // push plate
-  box(pu + 0.04, pu + 0.14, -1.0, 1.0, pz, pz + 0.07, COL.SIL, 0.02);   // cutting edge
-  if (T.pile > 0) {                                                 // snow piled up in front of the plate
-    const n = Math.floor(T.pile);
-    for (let i = 0; i < n; i++) {
-      const v = (hh(i, 1) - 0.5) * 1.9, u = pu + 0.18 + hh(i, 2) * (0.15 + n * 0.01), z = 0.12 + Math.max(0, 1 - Math.abs(v) / 1.0) * (0.05 + n * 0.008) * (0.5 + hh(i, 4)) * (1 - (u - pu) / 1.0);
-      const p = W(u, v, Math.min(0.95, z));
-      parts.push({ k: depth(p) + 0.1, sb: p });
-    }
-  }
-  // rear blower: delta/V opening forwards, apex at the back where the chute is
-  const BLF = (1 - T.bw) * 0.9;                                   // raised blower: the whole rear unit lifts
-  for (const sg of [1, -1]) beam([-1.55, sg * 0.45, 0.6], [-2.4, sg * 0.95, 0.55 + BLF], 0.05, 0.07, COL.CH);
-  box(-3.95, -3.3, -0.4, 0.4, 0.15 + BLF, 0.9 + BLF, COL.BLW);
-  for (const sg of [1, -1]) {
-    const du = 0.707, dv = sg * 0.707, pu2 = -sg * 0.707, pv2 = 0.707;   // wing direction (apex to tip) and across-wing direction
-    addBox(W(-3.1, sg * 0.65, 0.53 + BLF), Dv(du * 0.92, dv * 0.92, 0), Dv(pu2 * 0.3, pv2 * 0.3, 0), [0, 0, 0.38], COL.BLW);
-    addBox(W(-2.45, sg * 1.3, 0.5 + BLF), Dv(du * 0.04, dv * 0.04, 0), Dv(pu2 * 0.32, pv2 * 0.32, 0), [0, 0, 0.4], COL.BLW2, 0.02);
-  }
-  // chute: turntable, tube, elbow pointing the way the snow is thrown, deflector cap
-  const a = T.chute, ca = Math.cos(a), sa = Math.sin(a);
-  box(-3.85, -3.25, -0.3, 0.3, 0.9 + BLF, 1.0 + BLF, COL.BLW2);
-  box(-3.7, -3.4, -0.15, 0.15, 1.0 + BLF, 1.28 + BLF, COL.BLW);
-  addBox(W(CH_U + ca * 0.34, sa * 0.34, 1.26 + BLF), Dv(ca * 0.36, sa * 0.36, 0), Dv(-sa * 0.17, ca * 0.17, 0), [0, 0, 0.14], COL.BLW, 0.02);
-  addBox(W(CH_U + ca * 0.72, sa * 0.72, 1.32 + BLF), Dv(ca * 0.1, sa * 0.1, 0), Dv(-sa * 0.21, ca * 0.21, 0), [0, 0, 0.1], COL.BLW2, 0.03);
+  frontToolParts(K, parts, T.fr, T.bl, T.bb, T.load, T.pile);      // puskulevy tai kauha (ptool.js)
+  if (T.rr === 'blower') blowerParts(K, T.bw, T.chute);            // rear blower
+  else box(-1.95, -1.7, -0.1, 0.1, 0.45, 0.6, COL.DK);              // vetokoukku (peräkärrylle)
 }

@@ -119,6 +119,7 @@ function followCam(dt) {
   const k = Math.min(1, dt * 3.5); camX += (tx - camX) * k; camY += (ty - camY) * k;
 }
 function update(dt) {
+  riverStep(dt);
   if (scene === 'snow') { updateSnow(dt); return; }
   time += dt;
   gridBuild();

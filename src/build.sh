@@ -5,7 +5,7 @@ python3 - <<'P'
 import datetime
 ver = 'v' + open('VERSION').read().strip() + ' · ' + datetime.date.today().strftime('%d.%m.%Y')
 road = open('mikroad.js').read() + open('snd.js').read() + open('snd_exc.js').read() + open('snd_tool.js').read()
-parts = [open(f).read() for f in ['p2.js', 'p3.js', 'p4.js', 'p5.js', 'p6m.js', 'p6.js', 'pdavid.js', 'proute.js', 'pfox.js', 'p7.js']]
+parts = [open(f).read() for f in ['p2.js', 'p3.js', 'p4.js', 'p5.js', 'p6m.js', 'p6.js', 'ptool.js', 'pdavid.js', 'proute.js', 'pfox.js', 'p7.js']]
 p2 = parts[0]; i = p2.index('\n') + 1
 parts[0] = p2[:i] + road + p2[i:]
 head = open('p1.html').read().replace('__VERSION__', ver)

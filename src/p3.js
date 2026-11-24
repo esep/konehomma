@@ -106,20 +106,20 @@ function reset() {
 const acticon = document.getElementById('acticon');
 const mbtns = [...document.querySelectorAll('.mb[data-m]')], sbtns = [...document.querySelectorAll('.mb[data-s]')];
 function setActive(m) {
-  active = m; acticon.setAttribute('d', m.icon);
+  active = m; if (typeof AH !== 'undefined' && m !== tractor) { AH.on = false; AH.bar = 0; } acticon.setAttribute('d', m.icon);
   document.body.classList.toggle('exc', !!m.swingable);
   mbtns.forEach((b, i) => b.classList.toggle('sel', machines[i] === m));
   sbtns.forEach((b, i) => b.classList.toggle('sel', snowMachines[i] === m));
   if (scene === 'snow') {
     const dv = m === david, sw = dv ? ['Käännä nosturia vasemmalle', 'Käännä nosturia oikealle'] : ['Käännä puhallusta vasemmalle', 'Käännä puhallusta oikealle'];
     document.getElementById('swlb').setAttribute('aria-label', sw[0]); document.getElementById('swrb').setAttribute('aria-label', sw[1]);
-    document.getElementById('act').setAttribute('aria-label', dv ? 'Nosturi ylös tai alas' : 'Vaihda työkalu: linko, ei työkaluja tai puskulevy');
+    document.getElementById('act').setAttribute('aria-label', dv ? 'Nosturi ylös tai alas' : 'Työkalu: vaihda tai nosta ja laske, pitkä painallus irrottaa');
   }
 }
 function nextMachine() { if (scene === 'snow') setActive(snowMachines[(snowMachines.indexOf(active) + 1) % snowMachines.length]); else setActive(machines[(machines.indexOf(active) + 1) % machines.length]); }
 function action() {
   if (active === david) davidAction();                                 // nosturi: poimi ylös / laske maahan ja nouse itsestään
-  else if (active === tractor) tractor.state = (tractor.state + 1) % 3;   // 0 linko alas + levy ylös (oletus), 1 molemmat ylös, 2 levy alas + linko ylös
+  else if (active === tractor) tractorTap();                           // ptool.js: vaihto jos keula on työkalun renkaassa, muuten työkalun asento (ks. cycle())
   else if (active === loader) loader.state = (loader.state + 1) % 3;
   else if (active === truck) truck.state = (truck.state + 1) % 2;
   else if (exc.state === 0) exc.state = 1;                              // kaivuri: 1. painallus kauhaisee maasta (laskee, kauhaisee, nousee itsestään)
@@ -189,11 +189,11 @@ function drive(m, dt, on) {
   if (snow) {                                              // buildings: a slight touch only slows the tractor, and it slides along the wall
     const r0 = m.rect, sm = [r0[0] + 0.3, r0[1] - 0.3, r0[2] - 0.25];
     const ot = m === tractor ? david : m === david ? tractor : null;   // the two tractors do not drive through each other
-    const blocked = (x, y, h) => { const q = { x, y, h, rect: sm }; for (const o of SNOW_OBST) if (hits(q, o)) return true; if (ot && hits(q, { x: ot.x, y: ot.y, h: ot.h, rect: [ot.rect[0] + 0.3, ot.rect[1] - 0.3, ot.rect[2] - 0.25] })) return true;
+    const blocked = (x, y, h) => { const q = { x, y, h, rect: sm }; for (const o of SNOW_OBST) { if ((o === TRL_OBST || o === BLW_OBST) && m === tractor) continue; if (hits(q, o)) return true; } if (m === tractor && trailerBlocked(x, y, h, prev)) return true; if (ot && hits(q, { x: ot.x, y: ot.y, h: ot.h, rect: [ot.rect[0] + 0.3, ot.rect[1] - 0.3, ot.rect[2] - 0.25] })) return true;
       for (const b of BAGS) if (!b.held && b.z < 0.3) { const o = { x: b.x, y: b.y, h: 0, rect: [-0.5, 0.5, 0.5] }; if (hits(q, o) && !hits({ x: prev[0], y: prev[1], h: prev[2], rect: sm }, o)) return true; }   // wood bags on the ground are in the way (unless we already overlap one)
       if (m === david && armHits(x, y, h, m.swing) && !armHits(prev[0], prev[1], prev[2], m.swing)) return true;   // nosturi osuu seinään
       return false; };
-    if (blocked(m.x, m.y, m.h)) {
+    if (!blocked(prev[0], prev[1], prev[2]) && blocked(m.x, m.y, m.h)) {      // jo päällekkäin (esim. työkalun vaihto seinän vieressä): ei lukita, kone pääsee irti
       const nx = m.x, ny = m.y, nh = m.h, ns = m.steer;
       const tries = [[nx, prev[1], nh, ns], [prev[0], ny, nh, ns], [nx, ny, prev[2], prev[3]], [nx, prev[1], prev[2], prev[3]], [prev[0], ny, prev[2], prev[3]], [prev[0], prev[1], nh, ns]];
       let ok = false;
@@ -203,6 +203,7 @@ function drive(m, dt, on) {
       m.speed *= ok ? 0.9 : 0.5;
     }
   } else for (const o of [...machines, CR, ...HOLES.filter(H => !H.done)]) if (o !== m && hits(m, o)) { [m.x, m.y, m.h, m.steer] = prev; if (m === active) bump(Math.abs(m.speed)); m.speed = 0; break; }
+  if (snow && m === tractor) pushLoose(prev, dt);
   m.roll += m.speed * dt / m.R;
   m.trackAcc += Math.abs(m.speed) * dt;
   while (m.trackAcc >= 0.12) { m.trackAcc -= 0.12; if (snow) stampSnowTracks(m); else stampTracks(m); }

@@ -35,7 +35,7 @@ function render() {
       }
     }
     ctx.fillStyle = 'rgba(30,44,90,0.3)';
-    drawShadow(tractor, -3.95, 2.3, 1.3);
+    drawToolsGround();                                      // traktori, työkalut, peräkärry: varjot ja oranssit/vihreät renkaat
     drawShadow(david, -2.2, 2.5, 1.2);
     drawFoxGround();
     drawRoute();
@@ -72,7 +72,7 @@ function render() {
   let tp = null, dp = null;
   if (snowy) {
     buildTractor(parts); tp = parts.slice();
-    buildDavid(parts); dp = parts.slice(tp.length); bagParts(parts); foxParts(parts);
+    buildDavid(parts); dp = parts.slice(tp.length); bagParts(parts); foxParts(parts); toolParts(parts);
     for (const t of TREES) {
       const q = P([t.x, t.y, 0]); if (q[0] < -50 || q[0] > IW + 50 || q[1] < -10 || q[1] > IH + 300) continue;
       const b = t.t === 'b';
@@ -210,13 +210,14 @@ function render() {
     ctx.fillRect(q[0] - (sz >> 1), q[1] - (sz >> 1), sz, sz);
   }
   ctx.globalAlpha = 1;
+  if (snowy) drawHoldBar();                    // irroitus-palkki
   if (active !== david) drawPointer(active);   // Davidilla ei pientä osoitinnuolta (säkki- ja ovinuolet riittävät)
   if (snowy) { drawDavidGuide(); drawCelebration(); }
 }
 
 /* ---------- levels and the start menu ---------- */
 const hint = document.getElementById('hint');
-const HINT_SNOW = '<b>← → ↑ ↓</b> ajaminen · <b>välilyönti</b> työkalun vaihto · <b>Del PgDn</b> lingon suunta · <b class="num">1 2</b> traktori · <b>M</b> valikko';
+const HINT_SNOW = '<b>← → ↑ ↓</b> ajaminen · <b>välilyönti</b> työkalu / vaihto · <b>Del PgDn</b> lingon suunta · <b class="num">1 2</b> traktori · <b>M</b> valikko';
 const HINT_DAVID = '<b>← → ↑ ↓</b> ajaminen · <b>välilyönti</b> poimi / laske · <b>Del PgDn</b> kääntö · <b class="num">1 2</b> traktori · <b>M</b> valikko';
 const hintYard = m => '<b>← → ↑ ↓</b> ajaminen · <b>välilyönti</b> ' + (m === truck ? 'lava' : m === exc ? 'kaiva / tiputa' : 'kauha') + (m === exc ? ' · <b>Del PgDn</b> tornin kääntö' : '') + ' · <b class="num">1 2 3</b> vaihtaa konetta · <b>M</b> valikko';
 let hintKey = '';
@@ -281,12 +282,12 @@ addEventListener('keydown', e => {
   }
   if (e.key === 'Escape' || e.key === 'm' || e.key === 'M') { e.preventDefault(); showMenu(); return; }
   if (KEYMAP[e.key]) { keys[KEYMAP[e.key]] = 1; e.preventDefault(); firstInput(); }
-  else if (e.code === 'Space' || e.key === ' ') { e.preventDefault(); firstInput(); if (!e.repeat) action(); }
+  else if (e.code === 'Space' || e.key === ' ') { e.preventDefault(); firstInput(); if (!e.repeat) actPress(); }
   else if (e.key === 'Tab' || e.key === 'Enter') { e.preventDefault(); firstInput(); if (!e.repeat) nextMachine(); }
   else if (e.key === '1' || e.key === '2' || e.key === '3') pickMachine(+e.key - 1);
 });
-addEventListener('keyup', e => { if (KEYMAP[e.key]) { keys[KEYMAP[e.key]] = 0; e.preventDefault(); } });
-addEventListener('blur', () => { for (const k in keys) keys[k] = 0; });
+addEventListener('keyup', e => { if (KEYMAP[e.key]) { keys[KEYMAP[e.key]] = 0; e.preventDefault(); } else if (e.code === 'Space' || e.key === ' ') actRelease(); });
+addEventListener('blur', () => { for (const k in keys) keys[k] = 0; AH.on = false; AH.bar = 0; });
 
 // tap or click a machine to drive it
 cv.addEventListener('pointerdown', e => {
@@ -312,8 +313,8 @@ for (const el of document.querySelectorAll('.btn[data-k]')) {
   for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(ev, () => b.classList.remove('on'));
 });
 const act = document.getElementById('act');
-act.addEventListener('pointerdown', e => { e.preventDefault(); firstInput(); action(); act.classList.add('on'); });
-for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) act.addEventListener(ev, () => act.classList.remove('on'));
+act.addEventListener('pointerdown', e => { e.preventDefault(); firstInput(); actPress(); act.classList.add('on'); });
+for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) act.addEventListener(ev, () => { act.classList.remove('on'); actRelease(); });
 document.getElementById('reset').addEventListener('click', e => { e.currentTarget.blur(); if (scene === 'snow') resetSnow(); else reset(); });
 document.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
 document.addEventListener('contextmenu', e => e.preventDefault());
@@ -328,5 +329,5 @@ function frame(t) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.__game = { DOORS, HB, flakes, bankN: () => bankN, david, BAGS: () => BAGS, craneTip, DSLOT, setActive, zoom: z => { ZOOM = z; resize(); }, bumpN: () => bumpN, toolLog: () => Object.keys(TS).filter(k => TS[k]), bump, RT, FOX, FOXPR, foxStep, foxFree, HB, TREES, SNOW_OBST, setScene, keys, tractor, loader, truck, exc, CR, rocks, balls, action, gX, gY, startLevel: lv => startLevel(lv), snd: () => ({ loaded: Object.keys(SB), exc: Object.keys(EXB), st: curEng && curEng.st, eng: curEng && curEng.id, wind: !!wSrc, wl: wGain && wGain.gain.value, tg: tGain && tGain.gain.value, ac: AC && AC.state }) };
+window.__game = { snowAt, TL, AH, ringInfo, cycle, actPress, actRelease, tractorTap, bucketMouth, GLH, riverV: () => riverV, rsnd: () => [!!AC, !!TB.joki, AC && AC.state, Object.keys(TB)], DOORS, HB, flakes, bankN: () => bankN, david, BAGS: () => BAGS, craneTip, DSLOT, setActive, zoom: z => { ZOOM = z; resize(); }, bumpN: () => bumpN, toolLog: () => Object.keys(TS).filter(k => TS[k]), bump, RT, FOX, FOXPR, foxStep, foxFree, HB, TREES, SNOW_OBST, setScene, keys, tractor, loader, truck, exc, CR, rocks, balls, action, gX, gY, startLevel: lv => startLevel(lv), snd: () => ({ loaded: Object.keys(SB), exc: Object.keys(EXB), st: curEng && curEng.st, eng: curEng && curEng.id, wind: !!wSrc, wl: wGain && wGain.gain.value, tg: tGain && tGain.gain.value, ac: AC && AC.state }) };
 })();

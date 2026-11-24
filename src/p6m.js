@@ -27,7 +27,8 @@ const snowMix = (c, k) => c.map((v, i) => v + ([232, 238, 248][i] - v) * k);
 const FACE = { E: 0.94, S: 0.76 };
 const sh = (c, k) => `rgb(${Math.min(255, c[0] * k) | 0},${Math.min(255, c[1] * k) | 0},${Math.min(255, c[2] * k) | 0})`;
 const pw = (pts, col) => ({ w: pts, col });
-const MPARTS = [], MINT = [], footU = [], HB = [], SHAD = [];
+const MPARTS = [], MINT = [], footU = [], HB = [], SHAD = [], GLH = [];     // GLH: lasiseinät (kasvihuone): lumi pysähtyy niihin mutta ei tartu
+const TRAILER_START = { x: 0, y: 0, h: 0 }, BUCKET_START = { x: 0, y: 0, h: 0 };   // peräkärry ja kauha (ptool.js)
 
 function wbox(x0, y0, z0, x1, y1, z1, col, key, rad = 1) {
   MPARTS.push({ k: key, wp: true, c: [(x0 + x1) / 2, (y0 + y1) / 2, z1], rad, polys: [
@@ -280,12 +281,12 @@ buildTaloRoof();
 // vertical walls are stored along u; turn the ones that run along y by a quarter turn
 for (const o of SNOW_OBST) if (o.rot) { o.h = Math.PI / 2; delete o.rot; }
 
-/* ---- by the Halli: a stack of boards drying (1) and an orange trailer (2) ---- */
+/* ---- by the Halli: a stack of boards drying (1) and the start poses of the trailer and the bucket (2) ---- */
 {
   const Cx = gX(-44), Cy = gY(670);
   // (1) stack of boards: layers of planks separated by sticks, snow on top
   {
-    const x0 = Cx + 0.8, x1 = Cx + 2.7, y0 = Cy + 1.7, y1 = Cy + 5.7, kb = x1 + y1 - 0.8, W1 = [218, 180, 124], W2 = [202, 162, 106], DK = [96, 70, 46];
+    const x0 = Cx + 0.8, x1 = Cx + 2.7, y0 = Cy + 1.7, y1 = Cy + 5.7, kb = x1 + (y0 + y1) / 2 - 0.3, W1 = [218, 180, 124], W2 = [202, 162, 106], DK = [96, 70, 46];
     wbox(x0 + 0.06, y0 + 0.06, 0, x1 - 0.06, y1 - 0.06, 1.95, DK, kb - 0.05, 3);            // dark core shows in the gaps between layers
     for (let i = 0; i < 7; i++) {
       const z0 = 0.22 + i * 0.255, z1 = z0 + 0.2, c = i % 2 ? W2 : W1;
@@ -297,22 +298,9 @@ for (const o of SNOW_OBST) if (o.rot) { o.h = Math.PI / 2; delete o.rot; }
     footU.push([x0, y0, x1, y1]);
     SNOW_OBST.push({ x: (x0 + x1) / 2, y: (y0 + y1) / 2, h: 0, rect: [-(x1 - x0) / 2, (x1 - x0) / 2, (y1 - y0) / 2] });
   }
-  // (2) orange two-wheel trailer with a drawbar towards the east
-  {
-    const x0 = Cx + 4.1, x1 = Cx + 5.8, y0 = Cy + 1.5, y1 = Cy + 3.7, xm = (x0 + x1) / 2, kb = x1 + y1, OR = [226, 112, 36], OD = [176, 80, 24], th = 0.1;
-    wbox(x0, y0, 0.5, x1, y1, 0.62, OD, kb - 0.5, 2.5);                                      // floor
-    wbox(x0, y0, 0.62, x0 + th, y1, 1.12, OR, kb - 0.45, 2.5); wbox(x0, y0, 0.62, x1, y0 + th, 1.12, OR, kb - 0.44, 2.5);   // far sides
-    wbox(x0 + th, y0 + th, 0.62, x1 - th, y1 - th, 0.68, [236, 240, 246], kb - 0.4, 2.5);   // snow in the bed
-    wbox(x0, y1 - th, 0.62, x1, y1, 1.12, OR, kb - 0.3, 2.5); wbox(x1 - th, y0, 0.62, x1, y1, 1.12, OR, kb - 0.29, 2.5);   // near sides
-    wbox(x0 - 0.03, y0 - 0.03, 1.1, x1 + 0.03, y0 + th + 0.03, 1.16, OD, kb - 0.28, 2.5);   // rim
-    wbox(xm - 0.07, y1, 0.47, xm + 0.07, y1 + 0.9, 0.57, [60, 60, 64], kb - 0.1, 2.5);      // drawbar
-    wbox(xm - 0.1, y1 + 0.78, 0.2, xm + 0.1, y1 + 0.92, 0.47, [60, 60, 64], kb - 0.05, 2.5); // little stand
-    const yc = (y0 + y1) / 2 - 0.05, wheel = (px, r, col) => { const q = []; for (let i = 0; i < 12; i++) { const an = i / 12 * 6.283; q.push([px, yc + Math.cos(an) * r, 0.42 + Math.sin(an) * r]); } return pw(q, col); };
-    MPARTS.push({ k: kb - 0.2, wp: true, c: [x1, yc, 0.4], rad: 2.5, polys: [wheel(x1 + 0.2, 0.42, sh([34, 34, 38], FACE.E)), wheel(x1 + 0.21, 0.24, sh([168, 168, 172], FACE.E)), wheel(x1 + 0.22, 0.08, sh([70, 70, 74], FACE.E))] });
-    MPARTS.push({ k: kb - 0.7, wp: true, c: [x0, yc, 0.4], rad: 2.5, polys: [wheel(x0 - 0.2, 0.42, sh([34, 34, 38], FACE.E))] });
-    footU.push([x0, y0, x1, y1]);
-    SNOW_OBST.push({ x: xm, y: (y0 + y1) / 2, h: 0, rect: [-(x1 - x0) / 2, (x1 - x0) / 2, (y1 - y0) / 2] });
-  }
+  // (2) the orange two-wheel trailer is a movable machine now (ptool.js): start pose here, drawbar towards +y
+  TRAILER_START.x = Cx + 4.95; TRAILER_START.y = Cy + 2.6; TRAILER_START.h = Math.PI / 2;
+  BUCKET_START.x = Cx + 7.2; BUCKET_START.y = Cy + 1.9; BUCKET_START.h = 0;
 }
 
 /* ---- yard furniture: flag pole, garden swing, trees ---- */
@@ -396,6 +384,7 @@ for (const o of SNOW_OBST) if (o.rot) { o.h = Math.PI / 2; delete o.rot; }
   polys.push(pw([[gx0, gy1, 0], [gx1, gy1, 0], [gx1, gy1, 0.06], [gx0, gy1, 0.06]], FR));
   MPARTS.push({ k: (gx0 + gx1) / 2 + gy1 + 0.5, wp: true, c: [(gx0 + gx1) / 2, ym, 1.2], rad: 6, polys });
   SNOW_OBST.push({ x: (gx0 + gx1) / 2, y: ym, h: 0, rect: [-(gx1 - gx0) / 2, (gx1 - gx0) / 2, (gy1 - gy0) / 2] });
+  GLH.push({ x0: gx0, y0: gy0, x1: gx1, y1: gy1, e: E, r: Rg, ax: 'x', glass: true });
 }
 /* ---- a heap of stones from the river, on the lawn ---- */
 const STONES = [];
