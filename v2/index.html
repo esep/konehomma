@@ -146,7 +146,7 @@ body.snowmode .mb[data-s]{display:grid}
   </div>
   <div class="routebar" id="routebar" role="img" aria-label="Reittiä jäljellä"><i id="routefill"></i></div>
   <div class="hint" id="hint"></div>
-  <div class="ver">v2.14 · 23.11.2026</div>
+  <div class="ver">v2.15 · 24.11.2026</div>
   <button class="reset menub" id="menubtn" aria-label="Valikko"><svg viewBox="0 0 10 10"><path d="M1 2H9V3.4H1ZM1 4.3H9V5.7H1ZM1 6.6H9V8H1Z"/></svg><i class="mk">M</i></button>
   <button class="reset" id="reset" aria-label="Aloita alusta"><svg viewBox="0 0 10 10"><path d="M5 1A4 4 0 1 0 9 5H7.4A2.4 2.4 0 1 1 5 2.6V4.2L7.6 1.8L5 -0.6Z"/></svg></button>
 </div>
@@ -1471,7 +1471,7 @@ function buildExc(parts) {
 }
 
 function buildCrusher(parts) {
-  const { W, box, plate, beam } = kit(CR, parts);
+  const { W, Dv, box, plate, beam } = kit(CR, parts);
   for (const sg of [1, -1]) {                                   // tracks
     box(-2.3, 1.3, sg > 0 ? 0.46 : -0.88, sg > 0 ? 0.88 : -0.46, 0.02, 0.4, COL.TIRE);
     for (let i = 0; i < 9; i++) box(-2.25 + i * 0.4, -2.05 + i * 0.4, sg > 0 ? 0.88 : -0.9, sg > 0 ? 0.9 : -0.88, 0.05, 0.37, COL.TIRE2, 0.01);
@@ -1481,11 +1481,18 @@ function buildCrusher(parts) {
   // feed hopper, flared walls with rock inside
   const hp = [[-2.75, -0.8, 1.28], [-1.3, -0.8, 1.28], [-1.3, 0.8, 1.28], [-2.75, 0.8, 1.28]];
   const ht = [[-2.98, -1.02, 2.05], [-1.12, -1.02, 2.05], [-1.12, 1.02, 2.05], [-2.98, 1.02, 2.05]];
-  plate([W(-2.9, -0.95, 1.8), W(-1.2, -0.95, 1.8), W(-1.2, 0.95, 1.8), W(-2.9, 0.95, 1.8)], COL.ROCK, -0.05);
+  const h0 = parts.length;
+  // an open shaft: dark floor deep down, the far walls show their inside (darker), the near walls their outside
+  plate([W(-2.75, -0.8, 1.3), W(-1.3, -0.8, 1.3), W(-1.3, 0.8, 1.3), W(-2.75, 0.8, 1.3)], [30, 29, 30], -0.3);
+  for (const [u, v] of [[-2.4, -0.3], [-1.9, 0.35], [-2.2, 0.55], [-1.6, -0.5]]) plate([W(u - 0.18, v - 0.1, 1.33), W(u + 0.18, v - 0.12, 1.33), W(u + 0.1, v + 0.12, 1.4), W(u - 0.12, v + 0.1, 1.38)], COL.ROCK, -0.25);
   for (let i = 0; i < 4; i++) {
-    const j = (i + 1) % 4;
-    plate([W(...hp[i]), W(...hp[j]), W(...ht[j]), W(...ht[i])], COL.CRM);
+    const j = (i + 1) % 4, a = hp[i], b = hp[j];
+    const out = Dv((a[0] + b[0]) / 2 + 2.05, (a[1] + b[1]) / 2, 0);                  // outward direction of this wall
+    const far = vis([-out[0], -out[1], 0.4]);
+    plate([W(...hp[i]), W(...hp[j]), W(...ht[j]), W(...ht[i])], far ? [112, 106, 90] : COL.CRM, far ? -0.2 : 0);
+    if (!far) parts[parts.length - 1].nw = true;
   }
+  for (let i = h0; i < parts.length; i++) parts[i].hop = true;
   box(-1.3, -0.15, -0.6, 0.6, 0.66, 1.95, COL.CRM);             // crusher box
   box(-1.2, -0.25, -0.5, 0.5, 1.95, 2.0, COL.DK2);
   box(-1.0, -0.4, 0.6, 0.62, 0.85, 1.0, COL.LBL, 0.02);      // orange name plate
@@ -1983,15 +1990,33 @@ const BARE = (() => {
 /* ---- large tree sprites (the world is twice as wide, so the trees have to be taller too) ---- */
 const SPRUCE_L = (() => {
   const c = document.createElement('canvas'); c.width = 100; c.height = 210; const g = c.getContext('2d'), R = rng(5);
-  g.fillStyle = '#5a3d28'; g.fillRect(45, 190, 10, 18);
-  for (let i = 0; i < 7; i++) {
-    const top = 6 + i * 25, bot = top + 50, w = 15 + i * 5.6;
-    const tier = (col, dx, ww) => { g.fillStyle = col; g.beginPath(); g.moveTo(50, top); g.lineTo(50 + ww + dx, bot);
-      for (let k = 1; k < 8; k++) g.lineTo(50 + ww + dx - (2 * ww) * k / 8, bot - (k % 2 ? 0 : 5)); g.lineTo(50 - ww + dx, bot); g.closePath(); g.fill(); };
-    tier('#264d33', 0, w); tier('#31603f', -2, w * 0.82);
-    g.fillStyle = '#eef4fb'; g.beginPath(); g.moveTo(50, top); g.lineTo(50 + w * 0.5, top + 25); g.lineTo(50 + w * 0.22, top + 21); g.lineTo(50 + w * 0.05, top + 29); g.lineTo(50 - w * 0.3, top + 22); g.lineTo(50 - w * 0.5, top + 25); g.closePath(); g.fill();
-    g.fillStyle = 'rgba(27,58,39,0.55)'; g.fillRect(50 - w, bot - 3, 2 * w, 3);
+  g.lineCap = 'round';
+  g.fillStyle = '#4a3220'; g.fillRect(45, 188, 10, 20); g.fillStyle = '#5f4430'; g.fillRect(45, 188, 4, 20); g.fillStyle = '#e8eff8'; g.fillRect(44, 205, 12, 3);
+  const N = 9;
+  for (let i = N - 1; i >= 0; i--) {                       // lowest tier first, so the upper tiers overlap it
+    const top = 6 + i * 20.5, bot = top + 46, w = 11 + i * 5.4, rows = 5 + (i > 5 ? 1 : 0);
+    g.fillStyle = '#183326'; g.beginPath(); g.moveTo(50, top); g.lineTo(50 + w * 0.8, bot - 4); g.lineTo(50 - w * 0.8, bot - 4); g.closePath(); g.fill();   // dark core, seen between the branches
+    for (let r = 0; r < rows; r++) {
+      const f = (r + 1) / rows, y0 = top + 4 + f * (bot - top - 12), L = w * (0.3 + 0.78 * f);
+      for (const sg of [-1, 1]) {
+        const sh = sg < 0 ? 0 : 1, cols = [['#3f7d4e', '#2f6340', '#24503a'], ['#2a5a3a', '#1f4731', '#173626']][sh];
+        for (let k = 0; k < 3; k++) {                      // three twigs per branch, the lower ones droop more
+          const l = L * (1 - k * 0.14) + R() * 2, dr = 6 + k * 3 + f * 3, x1 = 50 + sg * l, y1 = y0 + dr;
+          g.strokeStyle = cols[k]; g.lineWidth = 5.5 - k * 0.9;
+          g.beginPath(); g.moveTo(50 + sg * 3, y0 - 2 + k * 2); g.quadraticCurveTo(50 + sg * l * 0.55, y0 + k * 1.5, x1, y1); g.stroke();
+          g.lineWidth = 2.2; g.strokeStyle = cols[2]; g.beginPath(); g.moveTo(x1 - sg * 3, y1 - 1); g.lineTo(x1 + sg * 0.5, y1 + 3); g.stroke();   // drooping tip
+        }
+        if (R() < 0.5) {                                  // snow on top of the branch, with a clump at the tip
+          const l = L * 0.9, sx = 50 + sg * l * (0.25 + R() * 0.15), ex = 50 + sg * l * (0.7 + R() * 0.25);
+          g.strokeStyle = '#f2f7fd'; g.lineWidth = 2.2; g.beginPath(); g.moveTo(sx, y0 - 3); g.quadraticCurveTo((sx + ex) / 2, y0 - 1, ex, y0 + 4); g.stroke();
+          g.fillStyle = '#dfe9f6'; g.fillRect(ex - 1, y0 + 4, 3, 2);
+        }
+      }
+    }
+    g.fillStyle = '#f2f7fd'; g.beginPath(); g.moveTo(50, top - 1); g.lineTo(50 + w * 0.34, top + 17); g.lineTo(50 + w * 0.12, top + 14); g.lineTo(50 - w * 0.05, top + 19); g.lineTo(50 - w * 0.22, top + 14); g.lineTo(50 - w * 0.34, top + 17); g.closePath(); g.fill();   // snow cap
+    g.fillStyle = 'rgba(12,30,22,0.5)'; g.fillRect(50 - w * 0.7, bot - 1, w * 1.4, 2);   // shadow under the tier
   }
+  g.fillStyle = '#183326'; g.fillRect(49, 2, 2, 8);                                                 // leader
   return c;
 })();
 const BARE_L = (() => {
@@ -2360,7 +2385,9 @@ function buildTractor(parts) {
   const rev = T.speed < -0.03 || (active === T && keys.down && T.speed < 0.2);
   plate([W(-1.705, -0.4, 0.58), W(-1.705, -0.1, 0.58), W(-1.705, -0.25, 0.82)], rev ? [255, 70, 60] : [232, 36, 40], 0.5, Dv(-1, 0, 0));
   if (rev) lamps.push({ col: 'rgba(255,40,30,0.16)', dot: 'rgba(255,90,70,0.7)', r: 5, p: W(-1.72, -0.25, 0.68), g0: W(-1.8, -0.25, 0), g1: W(-3.7, 0.35, 0), g2: W(-3.7, -0.85, 0) });
+  const sk0 = parts.length;
   box(1.0, 1.1, 0.3, 0.4, 1.34, 2.25, COL.DK); box(0.98, 1.12, 0.28, 0.42, 2.25, 2.31, COL.CH);   // exhaust stack
+  const stackK = Math.max(parts[sk0].k, parts[sk0 + 1].k);
   beacon(-0.4, 0.45, 2.44);
   lamp(0.05, 0.45, 2.38); lamp(0.05, -0.45, 2.38);
   // front loader: posts, boom and stick with a bend between them, the push plate
@@ -2368,6 +2395,7 @@ function buildTractor(parts) {
   const onB = k => [LD_P0[0] + (G.E[0] - LD_P0[0]) * k, LD_P0[1] + (G.E[1] - LD_P0[1]) * k];
   const onS = k => [G.E[0] + (G.F[0] - G.E[0]) * k, G.E[1] + (G.F[1] - G.E[1]) * k];
   for (const sg of [1, -1]) {
+    const lp0 = parts.length;
     box(-0.45, -0.05, ...sv(0.5, 0.64, sg), 0.7, 1.5, COL.LDR);
     beam([LD_P0[0], sg * 0.58, LD_P0[1]], [G.E[0], sg * 0.58, G.E[1]], 0.06, 0.1, COL.LDR);            // boom
     beam([G.E[0], sg * 0.58, G.E[1]], [G.F[0], sg * 0.58, G.F[1]], 0.06, 0.09, COL.LDR);              // stick
@@ -2375,6 +2403,8 @@ function buildTractor(parts) {
     const a = onB(0.2), b = onS(0.5);
     beam([0.1, sg * 0.5, 0.8], [a[0], sg * 0.5, a[1] - 0.12], 0.04, 0.05, COL.CYL);                    // boom cylinder
     beam([a[0], sg * 0.5, a[1] - 0.12], [b[0], sg * 0.5, b[1] + 0.05], 0.03, 0.04, COL.CYL);          // plate cylinder
+    // the loader arm on the side nearer to the viewer lies in front of the exhaust stack
+    if (depth(W(1.0, sg * 0.58, 1.8)) > depth(W(1.05, 0.35, 1.8))) for (let i = lp0 + 1; i < parts.length; i++) parts[i].k = Math.max(parts[i].k, stackK + 0.05);
   }
   box(pu - 0.12, pu, -0.65, 0.65, pz + 0.3, pz + 0.38, COL.LDR);
   box(pu, pu + 0.08, -1.0, 1.0, pz + 0.05, pz + 0.6, COL.BLW);    // push plate
@@ -3029,6 +3059,17 @@ function render() {
       const hull = lo.slice(0, -1).concat(up.slice(0, -1));
       ctx.beginPath(); hull.forEach((q, i) => i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1])); ctx.closePath(); ctx.fill();
     }
+    // ambient occlusion: a soft dark rim on the ground around every building (nested rings, darkest at the wall)
+    ctx.fillStyle = 'rgba(18,26,66,0.16)';
+    for (const s of SHAD) {
+      const [a0, b0, a1, b1] = s.u;
+      for (let i = 0; i < 7; i++) {
+        const d = 0.04 + (6 - i) * 0.09, rr = [[a0 - d, b0 - d], [a1 + d, b0 - d], [a1 + d, b1 + d], [a0 - d, b1 + d]], ii = [[a0, b0], [a0, b1], [a1, b1], [a1, b0]];
+        ctx.beginPath(); rr.forEach(([x, y], k) => { const q = P([x, y, 0]); k ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); }); ctx.closePath();
+        ii.forEach(([x, y], k) => { const q = P([x, y, 0]); k ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); }); ctx.closePath();
+        ctx.fill('evenodd');
+      }
+    }
     ctx.fillStyle = 'rgba(30,44,90,0.3)';
     drawShadow(tractor, -3.95, 2.3, 1.3);
     drawShadow(david, -2.2, 2.5, 1.2);
@@ -3091,6 +3132,17 @@ function render() {
     const roles = flag => { const ps = parts.filter(q => q[flag]); if (!ps.length) return -1e9; let kc = 0; for (const q of ps) kc += q.k; kc /= ps.length;
       for (const q of ps) { if (q.flr) q.k = Math.min(q.k, kc - 0.3); else if (q.k > kc + 0.02) q.k = Math.max(q.k, kc + 0.1); else q.k = Math.min(q.k, kc - 0.1); } return kc; };
     LKC = roles('bkt'); EKC = roles('ebk');
+    // the excavator bucket over the feed hopper is drawn on top of the hopper walls, so the open shaft stays visible
+    { let hk = -1e9, hkAll = -1e9, ek = 1e9, ekMax = -1e9;
+      for (const q of parts) { if (q.hop) { hkAll = Math.max(hkAll, q.k); if (!q.nw) hk = Math.max(hk, q.k); } if (q.ebk) { ek = Math.min(ek, q.k); ekMax = Math.max(ekMax, q.k); } }
+      const c = Math.cos(CR.h), sn = Math.sin(CR.h), G = excGeo(exc), loc = (a, b) => { const p = G.loc(a, b, 0), dx = p[0] - CR.x, dy = p[1] - CR.y; return [dx * c + dy * sn, -dx * sn + dy * c, p[2]]; };
+      const tp = loc(EX_BL, 0), md = loc(0.3, 0.2), near = hu => hu > -3.6 && hu < -0.8;
+      if (hk > -1e8 && ek < 1e9 && (near(tp[0]) && Math.abs(tp[1]) < 1.5 || near(md[0]) && Math.abs(md[1]) < 1.5)) {
+        const inside = md[0] > -3.0 && md[0] < -1.1 && Math.abs(md[1]) < 1.0 && md[2] < 2.1;      // the bucket is in the shaft: the near wall hides its lower part
+        const ref = inside ? hk : hkAll;
+        if (ref + 0.02 > ek) { const bump = ref - ek + 0.02; for (const q of parts) if (q.ebk) q.k += bump; EKC += bump; ekMax += bump; }
+        if (inside) for (const q of parts) if (q.nw && q.k <= ekMax) q.k = ekMax + 0.02;
+      } }
     // a bucket raised towards the crusher is drawn completely on top of it (a lowered one stays behind it)
     bktBump = 0;
     if (loader.alpha > 0.3 && Math.hypot(loader.x - CR.x, loader.y - CR.y) < 10) {

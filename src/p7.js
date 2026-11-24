@@ -23,6 +23,17 @@ function render() {
       const hull = lo.slice(0, -1).concat(up.slice(0, -1));
       ctx.beginPath(); hull.forEach((q, i) => i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1])); ctx.closePath(); ctx.fill();
     }
+    // ambient occlusion: a soft dark rim on the ground around every building (nested rings, darkest at the wall)
+    ctx.fillStyle = 'rgba(18,26,66,0.16)';
+    for (const s of SHAD) {
+      const [a0, b0, a1, b1] = s.u;
+      for (let i = 0; i < 7; i++) {
+        const d = 0.04 + (6 - i) * 0.09, rr = [[a0 - d, b0 - d], [a1 + d, b0 - d], [a1 + d, b1 + d], [a0 - d, b1 + d]], ii = [[a0, b0], [a0, b1], [a1, b1], [a1, b0]];
+        ctx.beginPath(); rr.forEach(([x, y], k) => { const q = P([x, y, 0]); k ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); }); ctx.closePath();
+        ii.forEach(([x, y], k) => { const q = P([x, y, 0]); k ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); }); ctx.closePath();
+        ctx.fill('evenodd');
+      }
+    }
     ctx.fillStyle = 'rgba(30,44,90,0.3)';
     drawShadow(tractor, -3.95, 2.3, 1.3);
     drawShadow(david, -2.2, 2.5, 1.2);
@@ -85,6 +96,17 @@ function render() {
     const roles = flag => { const ps = parts.filter(q => q[flag]); if (!ps.length) return -1e9; let kc = 0; for (const q of ps) kc += q.k; kc /= ps.length;
       for (const q of ps) { if (q.flr) q.k = Math.min(q.k, kc - 0.3); else if (q.k > kc + 0.02) q.k = Math.max(q.k, kc + 0.1); else q.k = Math.min(q.k, kc - 0.1); } return kc; };
     LKC = roles('bkt'); EKC = roles('ebk');
+    // the excavator bucket over the feed hopper is drawn on top of the hopper walls, so the open shaft stays visible
+    { let hk = -1e9, hkAll = -1e9, ek = 1e9, ekMax = -1e9;
+      for (const q of parts) { if (q.hop) { hkAll = Math.max(hkAll, q.k); if (!q.nw) hk = Math.max(hk, q.k); } if (q.ebk) { ek = Math.min(ek, q.k); ekMax = Math.max(ekMax, q.k); } }
+      const c = Math.cos(CR.h), sn = Math.sin(CR.h), G = excGeo(exc), loc = (a, b) => { const p = G.loc(a, b, 0), dx = p[0] - CR.x, dy = p[1] - CR.y; return [dx * c + dy * sn, -dx * sn + dy * c, p[2]]; };
+      const tp = loc(EX_BL, 0), md = loc(0.3, 0.2), near = hu => hu > -3.6 && hu < -0.8;
+      if (hk > -1e8 && ek < 1e9 && (near(tp[0]) && Math.abs(tp[1]) < 1.5 || near(md[0]) && Math.abs(md[1]) < 1.5)) {
+        const inside = md[0] > -3.0 && md[0] < -1.1 && Math.abs(md[1]) < 1.0 && md[2] < 2.1;      // the bucket is in the shaft: the near wall hides its lower part
+        const ref = inside ? hk : hkAll;
+        if (ref + 0.02 > ek) { const bump = ref - ek + 0.02; for (const q of parts) if (q.ebk) q.k += bump; EKC += bump; ekMax += bump; }
+        if (inside) for (const q of parts) if (q.nw && q.k <= ekMax) q.k = ekMax + 0.02;
+      } }
     // a bucket raised towards the crusher is drawn completely on top of it (a lowered one stays behind it)
     bktBump = 0;
     if (loader.alpha > 0.3 && Math.hypot(loader.x - CR.x, loader.y - CR.y) < 10) {

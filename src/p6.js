@@ -297,7 +297,9 @@ function buildTractor(parts) {
   const rev = T.speed < -0.03 || (active === T && keys.down && T.speed < 0.2);
   plate([W(-1.705, -0.4, 0.58), W(-1.705, -0.1, 0.58), W(-1.705, -0.25, 0.82)], rev ? [255, 70, 60] : [232, 36, 40], 0.5, Dv(-1, 0, 0));
   if (rev) lamps.push({ col: 'rgba(255,40,30,0.16)', dot: 'rgba(255,90,70,0.7)', r: 5, p: W(-1.72, -0.25, 0.68), g0: W(-1.8, -0.25, 0), g1: W(-3.7, 0.35, 0), g2: W(-3.7, -0.85, 0) });
+  const sk0 = parts.length;
   box(1.0, 1.1, 0.3, 0.4, 1.34, 2.25, COL.DK); box(0.98, 1.12, 0.28, 0.42, 2.25, 2.31, COL.CH);   // exhaust stack
+  const stackK = Math.max(parts[sk0].k, parts[sk0 + 1].k);
   beacon(-0.4, 0.45, 2.44);
   lamp(0.05, 0.45, 2.38); lamp(0.05, -0.45, 2.38);
   // front loader: posts, boom and stick with a bend between them, the push plate
@@ -305,6 +307,7 @@ function buildTractor(parts) {
   const onB = k => [LD_P0[0] + (G.E[0] - LD_P0[0]) * k, LD_P0[1] + (G.E[1] - LD_P0[1]) * k];
   const onS = k => [G.E[0] + (G.F[0] - G.E[0]) * k, G.E[1] + (G.F[1] - G.E[1]) * k];
   for (const sg of [1, -1]) {
+    const lp0 = parts.length;
     box(-0.45, -0.05, ...sv(0.5, 0.64, sg), 0.7, 1.5, COL.LDR);
     beam([LD_P0[0], sg * 0.58, LD_P0[1]], [G.E[0], sg * 0.58, G.E[1]], 0.06, 0.1, COL.LDR);            // boom
     beam([G.E[0], sg * 0.58, G.E[1]], [G.F[0], sg * 0.58, G.F[1]], 0.06, 0.09, COL.LDR);              // stick
@@ -312,6 +315,8 @@ function buildTractor(parts) {
     const a = onB(0.2), b = onS(0.5);
     beam([0.1, sg * 0.5, 0.8], [a[0], sg * 0.5, a[1] - 0.12], 0.04, 0.05, COL.CYL);                    // boom cylinder
     beam([a[0], sg * 0.5, a[1] - 0.12], [b[0], sg * 0.5, b[1] + 0.05], 0.03, 0.04, COL.CYL);          // plate cylinder
+    // the loader arm on the side nearer to the viewer lies in front of the exhaust stack
+    if (depth(W(1.0, sg * 0.58, 1.8)) > depth(W(1.05, 0.35, 1.8))) for (let i = lp0 + 1; i < parts.length; i++) parts[i].k = Math.max(parts[i].k, stackK + 0.05);
   }
   box(pu - 0.12, pu, -0.65, 0.65, pz + 0.3, pz + 0.38, COL.LDR);
   box(pu, pu + 0.08, -1.0, 1.0, pz + 0.05, pz + 0.6, COL.BLW);    // push plate

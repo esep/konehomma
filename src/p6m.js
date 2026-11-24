@@ -441,15 +441,33 @@ const BARE = (() => {
 /* ---- large tree sprites (the world is twice as wide, so the trees have to be taller too) ---- */
 const SPRUCE_L = (() => {
   const c = document.createElement('canvas'); c.width = 100; c.height = 210; const g = c.getContext('2d'), R = rng(5);
-  g.fillStyle = '#5a3d28'; g.fillRect(45, 190, 10, 18);
-  for (let i = 0; i < 7; i++) {
-    const top = 6 + i * 25, bot = top + 50, w = 15 + i * 5.6;
-    const tier = (col, dx, ww) => { g.fillStyle = col; g.beginPath(); g.moveTo(50, top); g.lineTo(50 + ww + dx, bot);
-      for (let k = 1; k < 8; k++) g.lineTo(50 + ww + dx - (2 * ww) * k / 8, bot - (k % 2 ? 0 : 5)); g.lineTo(50 - ww + dx, bot); g.closePath(); g.fill(); };
-    tier('#264d33', 0, w); tier('#31603f', -2, w * 0.82);
-    g.fillStyle = '#eef4fb'; g.beginPath(); g.moveTo(50, top); g.lineTo(50 + w * 0.5, top + 25); g.lineTo(50 + w * 0.22, top + 21); g.lineTo(50 + w * 0.05, top + 29); g.lineTo(50 - w * 0.3, top + 22); g.lineTo(50 - w * 0.5, top + 25); g.closePath(); g.fill();
-    g.fillStyle = 'rgba(27,58,39,0.55)'; g.fillRect(50 - w, bot - 3, 2 * w, 3);
+  g.lineCap = 'round';
+  g.fillStyle = '#4a3220'; g.fillRect(45, 188, 10, 20); g.fillStyle = '#5f4430'; g.fillRect(45, 188, 4, 20); g.fillStyle = '#e8eff8'; g.fillRect(44, 205, 12, 3);
+  const N = 9;
+  for (let i = N - 1; i >= 0; i--) {                       // lowest tier first, so the upper tiers overlap it
+    const top = 6 + i * 20.5, bot = top + 46, w = 11 + i * 5.4, rows = 5 + (i > 5 ? 1 : 0);
+    g.fillStyle = '#183326'; g.beginPath(); g.moveTo(50, top); g.lineTo(50 + w * 0.8, bot - 4); g.lineTo(50 - w * 0.8, bot - 4); g.closePath(); g.fill();   // dark core, seen between the branches
+    for (let r = 0; r < rows; r++) {
+      const f = (r + 1) / rows, y0 = top + 4 + f * (bot - top - 12), L = w * (0.3 + 0.78 * f);
+      for (const sg of [-1, 1]) {
+        const sh = sg < 0 ? 0 : 1, cols = [['#3f7d4e', '#2f6340', '#24503a'], ['#2a5a3a', '#1f4731', '#173626']][sh];
+        for (let k = 0; k < 3; k++) {                      // three twigs per branch, the lower ones droop more
+          const l = L * (1 - k * 0.14) + R() * 2, dr = 6 + k * 3 + f * 3, x1 = 50 + sg * l, y1 = y0 + dr;
+          g.strokeStyle = cols[k]; g.lineWidth = 5.5 - k * 0.9;
+          g.beginPath(); g.moveTo(50 + sg * 3, y0 - 2 + k * 2); g.quadraticCurveTo(50 + sg * l * 0.55, y0 + k * 1.5, x1, y1); g.stroke();
+          g.lineWidth = 2.2; g.strokeStyle = cols[2]; g.beginPath(); g.moveTo(x1 - sg * 3, y1 - 1); g.lineTo(x1 + sg * 0.5, y1 + 3); g.stroke();   // drooping tip
+        }
+        if (R() < 0.5) {                                  // snow on top of the branch, with a clump at the tip
+          const l = L * 0.9, sx = 50 + sg * l * (0.25 + R() * 0.15), ex = 50 + sg * l * (0.7 + R() * 0.25);
+          g.strokeStyle = '#f2f7fd'; g.lineWidth = 2.2; g.beginPath(); g.moveTo(sx, y0 - 3); g.quadraticCurveTo((sx + ex) / 2, y0 - 1, ex, y0 + 4); g.stroke();
+          g.fillStyle = '#dfe9f6'; g.fillRect(ex - 1, y0 + 4, 3, 2);
+        }
+      }
+    }
+    g.fillStyle = '#f2f7fd'; g.beginPath(); g.moveTo(50, top - 1); g.lineTo(50 + w * 0.34, top + 17); g.lineTo(50 + w * 0.12, top + 14); g.lineTo(50 - w * 0.05, top + 19); g.lineTo(50 - w * 0.22, top + 14); g.lineTo(50 - w * 0.34, top + 17); g.closePath(); g.fill();   // snow cap
+    g.fillStyle = 'rgba(12,30,22,0.5)'; g.fillRect(50 - w * 0.7, bot - 1, w * 1.4, 2);   // shadow under the tier
   }
+  g.fillStyle = '#183326'; g.fillRect(49, 2, 2, 8);                                                 // leader
   return c;
 })();
 const BARE_L = (() => {

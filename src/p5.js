@@ -227,7 +227,7 @@ function buildExc(parts) {
 }
 
 function buildCrusher(parts) {
-  const { W, box, plate, beam } = kit(CR, parts);
+  const { W, Dv, box, plate, beam } = kit(CR, parts);
   for (const sg of [1, -1]) {                                   // tracks
     box(-2.3, 1.3, sg > 0 ? 0.46 : -0.88, sg > 0 ? 0.88 : -0.46, 0.02, 0.4, COL.TIRE);
     for (let i = 0; i < 9; i++) box(-2.25 + i * 0.4, -2.05 + i * 0.4, sg > 0 ? 0.88 : -0.9, sg > 0 ? 0.9 : -0.88, 0.05, 0.37, COL.TIRE2, 0.01);
@@ -237,11 +237,18 @@ function buildCrusher(parts) {
   // feed hopper, flared walls with rock inside
   const hp = [[-2.75, -0.8, 1.28], [-1.3, -0.8, 1.28], [-1.3, 0.8, 1.28], [-2.75, 0.8, 1.28]];
   const ht = [[-2.98, -1.02, 2.05], [-1.12, -1.02, 2.05], [-1.12, 1.02, 2.05], [-2.98, 1.02, 2.05]];
-  plate([W(-2.9, -0.95, 1.8), W(-1.2, -0.95, 1.8), W(-1.2, 0.95, 1.8), W(-2.9, 0.95, 1.8)], COL.ROCK, -0.05);
+  const h0 = parts.length;
+  // an open shaft: dark floor deep down, the far walls show their inside (darker), the near walls their outside
+  plate([W(-2.75, -0.8, 1.3), W(-1.3, -0.8, 1.3), W(-1.3, 0.8, 1.3), W(-2.75, 0.8, 1.3)], [30, 29, 30], -0.3);
+  for (const [u, v] of [[-2.4, -0.3], [-1.9, 0.35], [-2.2, 0.55], [-1.6, -0.5]]) plate([W(u - 0.18, v - 0.1, 1.33), W(u + 0.18, v - 0.12, 1.33), W(u + 0.1, v + 0.12, 1.4), W(u - 0.12, v + 0.1, 1.38)], COL.ROCK, -0.25);
   for (let i = 0; i < 4; i++) {
-    const j = (i + 1) % 4;
-    plate([W(...hp[i]), W(...hp[j]), W(...ht[j]), W(...ht[i])], COL.CRM);
+    const j = (i + 1) % 4, a = hp[i], b = hp[j];
+    const out = Dv((a[0] + b[0]) / 2 + 2.05, (a[1] + b[1]) / 2, 0);                  // outward direction of this wall
+    const far = vis([-out[0], -out[1], 0.4]);
+    plate([W(...hp[i]), W(...hp[j]), W(...ht[j]), W(...ht[i])], far ? [112, 106, 90] : COL.CRM, far ? -0.2 : 0);
+    if (!far) parts[parts.length - 1].nw = true;
   }
+  for (let i = h0; i < parts.length; i++) parts[i].hop = true;
   box(-1.3, -0.15, -0.6, 0.6, 0.66, 1.95, COL.CRM);             // crusher box
   box(-1.2, -0.25, -0.5, 0.5, 1.95, 2.0, COL.DK2);
   box(-1.0, -0.4, 0.6, 0.62, 0.85, 1.0, COL.LBL, 0.02);      // orange name plate
