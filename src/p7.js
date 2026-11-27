@@ -320,12 +320,48 @@ document.addEventListener('touchmove', e => e.preventDefault(), { passive: false
 document.addEventListener('contextmenu', e => e.preventDefault());
 document.addEventListener('gesturestart', e => e.preventDefault());
 
+/* ---------- gamepad (standard mapping) ----------
+   Writes into the same `keys` as keyboard and touch, but only when the pad's own state changes,
+   so the three input devices can be mixed freely. */
+const GP_DEAD = 0.15, GP_TRIG = 0.1;
+let gpHeld = {}, gpPrev = { start: 0, back: 0, face: 0, nav: 0 };
+const gpDead = v => Math.abs(v) < GP_DEAD ? 0 : v;
+function gpSet(k, on) { on = on ? 1 : 0; if ((gpHeld[k] || 0) === on) return; gpHeld[k] = on; keys[k] = on; if (on) firstInput(); }
+function gpPoll() {
+  let pad = null;
+  try { for (const g of (navigator.getGamepads ? navigator.getGamepads() : [])) if (g && g.connected && g.mapping === 'standard') { pad = g; break; } } catch (_) {}
+  if (!pad) { if (gpPrev.face) actRelease(); gpHeld = {}; gpPrev = { start: 0, back: 0, face: 0, nav: 0 }; return; }
+  const b = i => { const x = pad.buttons[i]; return x ? (x.pressed || x.value > GP_TRIG ? 1 : 0) : 0; };
+  const ax = i => gpDead(pad.axes[i] || 0);
+  const start = b(9), back = b(8), face = b(0) | b(1) | b(2) | b(3);
+  const lx = ax(0), nav = lx < 0 || b(14) ? -1 : lx > 0 || b(15) ? 1 : 0;
+  const startEdge = start && !gpPrev.start, backEdge = back && !gpPrev.back, faceEdge = face && !gpPrev.face, faceUp = !face && gpPrev.face, navEdge = nav && nav !== gpPrev.nav;
+  gpPrev = { start, back, face, nav };
+  if (!started) {                                                  // start screen: left/right picks a level, a face button or Start begins
+    gpHeld = {};
+    if (navEdge) { const fi = cards.indexOf(document.activeElement); cards[fi === 0 ? 1 : 0].focus(); }
+    if (faceEdge || startEdge) { firstInput(); const c = cards[Math.max(0, cards.indexOf(document.activeElement))]; startLevel(c.dataset.lv, c); }
+    return;
+  }
+  if (startEdge) { showMenu(); return; }
+  if (backEdge) { firstInput(); nextMachine(); }
+  gpSet('up', b(7)); gpSet('down', b(6));
+  gpSet('left', lx < 0 || b(14)); gpSet('right', lx > 0 || b(15));
+  const rx = ax(2);
+  gpSet('swl', rx < 0 || b(4)); gpSet('swr', rx > 0 || b(5));
+  if (faceEdge) { firstInput(); actPress(); }
+  else if (faceUp) actRelease();
+}
+addEventListener('gamepadconnected', () => { try { firstInput(); } catch (_) {} });
+addEventListener('gamepaddisconnected', () => { for (const k in gpHeld) if (gpHeld[k]) keys[k] = 0; if (gpPrev.face) actRelease(); gpHeld = {}; gpPrev = { start: 0, back: 0, face: 0, nav: 0 }; });
+addEventListener('blur', () => { gpHeld = {}; });
+
 /* ---------- loop ---------- */
 reset();
 let last = performance.now();
 function frame(t) {
   const dt = Math.min(0.05, Math.max(0, (t - last) / 1000)); last = t;
-  update(dt); render();
+  gpPoll(); update(dt); render();
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
