@@ -326,11 +326,12 @@ document.addEventListener('gesturestart', e => e.preventDefault());
 const GP_DEAD = 0.15, GP_TRIG = 0.1;
 let gpHeld = {}, gpPrev = { start: 0, back: 0, face: 0, nav: 0 };
 const gpDead = v => Math.abs(v) < GP_DEAD ? 0 : v;
+const gpAnalog = v => Math.abs(v) < GP_DEAD ? 0 : Math.sign(v) * Math.min(1, (Math.abs(v) - GP_DEAD) / (1 - GP_DEAD));   // rescaled so the stick starts smoothly from 0 after the deadzone
 function gpSet(k, on) { on = on ? 1 : 0; if ((gpHeld[k] || 0) === on) return; gpHeld[k] = on; keys[k] = on; if (on) firstInput(); }
 function gpPoll() {
   let pad = null;
   try { for (const g of (navigator.getGamepads ? navigator.getGamepads() : [])) if (g && g.connected && g.mapping === 'standard') { pad = g; break; } } catch (_) {}
-  if (!pad) { if (gpPrev.face) actRelease(); gpHeld = {}; gpPrev = { start: 0, back: 0, face: 0, nav: 0 }; return; }
+  if (!pad) { if (gpPrev.face) actRelease(); gpHeld = {}; keys.steerAxis = keys.swAxis = 0; gpPrev = { start: 0, back: 0, face: 0, nav: 0 }; return; }
   const b = i => { const x = pad.buttons[i]; return x ? (x.pressed || x.value > GP_TRIG ? 1 : 0) : 0; };
   const ax = i => gpDead(pad.axes[i] || 0);
   const start = b(9), back = b(8), face = b(0) | b(1) | b(2) | b(3);
@@ -338,7 +339,7 @@ function gpPoll() {
   const startEdge = start && !gpPrev.start, backEdge = back && !gpPrev.back, faceEdge = face && !gpPrev.face, faceUp = !face && gpPrev.face, navEdge = nav && nav !== gpPrev.nav;
   gpPrev = { start, back, face, nav };
   if (!started) {                                                  // start screen: left/right picks a level, a face button or Start begins
-    gpHeld = {};
+    gpHeld = {}; keys.steerAxis = keys.swAxis = 0;
     if (navEdge) { const fi = cards.indexOf(document.activeElement); cards[fi === 0 ? 1 : 0].focus(); }
     if (faceEdge || startEdge) { firstInput(); const c = cards[Math.max(0, cards.indexOf(document.activeElement))]; startLevel(c.dataset.lv, c); }
     return;
@@ -346,14 +347,15 @@ function gpPoll() {
   if (startEdge) { showMenu(); return; }
   if (backEdge) { firstInput(); nextMachine(); }
   gpSet('up', b(7)); gpSet('down', b(6));
-  gpSet('left', lx < 0 || b(14)); gpSet('right', lx > 0 || b(15));
-  const rx = ax(2);
-  gpSet('swl', rx < 0 || b(4)); gpSet('swr', rx > 0 || b(5));
+  gpSet('left', b(14)); gpSet('right', b(15));                     // D-pad: digital as on the keyboard
+  keys.steerAxis = gpAnalog(pad.axes[0] || 0);                    // left stick: analog steering
+  gpSet('swl', b(4)); gpSet('swr', b(5));                          // bumpers: digital turret turn
+  keys.swAxis = gpAnalog(pad.axes[2] || 0);                        // right stick: analog turret turn
   if (faceEdge) { firstInput(); actPress(); }
   else if (faceUp) actRelease();
 }
 addEventListener('gamepadconnected', () => { try { firstInput(); } catch (_) {} });
-addEventListener('gamepaddisconnected', () => { for (const k in gpHeld) if (gpHeld[k]) keys[k] = 0; if (gpPrev.face) actRelease(); gpHeld = {}; gpPrev = { start: 0, back: 0, face: 0, nav: 0 }; });
+addEventListener('gamepaddisconnected', () => { for (const k in gpHeld) if (gpHeld[k]) keys[k] = 0; if (gpPrev.face) actRelease(); gpHeld = {}; keys.steerAxis = keys.swAxis = 0; gpPrev = { start: 0, back: 0, face: 0, nav: 0 }; });
 addEventListener('blur', () => { gpHeld = {}; });
 
 /* ---------- loop ---------- */

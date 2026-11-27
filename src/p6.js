@@ -178,7 +178,7 @@ function updateSnow(dt) {
   const ch0 = T.chute;
   toolStep(dt);                                                  // peräkärry seuraa, kytkentä, välilyönnin pito
   const tm = toolTargets(dt);                                    // etutyökalun varret (1 = levy ylhäällä), kauhan kallistus, linko (1 = alhaalla), kärryn kippaus
-  if (TA && T.rr === 'blower' && keys.swl !== keys.swr) T.chute = Math.max(CH_MIN, Math.min(CH_MAX, T.chute + (keys.swl ? 1 : -1) * 1.1 * dt));      // only the rear half circle: never towards the front
+  if (TA && T.rr === 'blower' && (keys.swl !== keys.swr || keys.swAxis)) T.chute = Math.max(CH_MIN, Math.min(CH_MAX, T.chute + (keys.swl !== keys.swr ? (keys.swl ? 1 : -1) : -keys.swAxis) * 1.1 * dt));      // only the rear half circle: never towards the front
   const moving = tm || T.chute !== ch0;
   const indoors = inBld(T.x, T.y) || inBld(T.x - 3 * Math.cos(T.h), T.y - 3 * Math.sin(T.h));   // no blowing inside a building
   T.rpm = approach(T.rpm, T.rr === 'blower' && T.fr === 'plate' && T.bl > 0.7 && T.bw > 0.7 && !indoors ? 1 : 0, 4 * dt);   // the blower only runs lowered and with the plate up

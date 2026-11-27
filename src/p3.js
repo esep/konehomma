@@ -63,7 +63,7 @@ const CR_DROP = crLocal(4.85, 0, 0);
 const machines = [loader, truck, exc];
 let active = loader;
 let balls = [], rocks = [];
-const keys = { left: 0, right: 0, up: 0, down: 0, swl: 0, swr: 0 };
+const keys = { left: 0, right: 0, up: 0, down: 0, swl: 0, swr: 0, steerAxis: 0, swAxis: 0 };   // steerAxis/swAxis: analog -1..1 from a gamepad stick (left = negative)
 const SNOW_OBST = [], DOORS = [];   // DOORS: oviaukot { horiz, plane, a0, a1 } (nosturi painuu matalaksi niiden kohdalla)
    // later: buildings in the snow yard, each { x, y, h, rect: [u0, u1, vHalf] }
 
@@ -162,14 +162,16 @@ function overlap(a, b) {
 
 function drive(m, dt, on) {
   const k = on ? keys : { left: 0, right: 0, up: 0, down: 0 };
+  const sAx = on ? keys.steerAxis : 0, swD = keys.swl !== keys.swr ? (keys.swl ? 1 : -1) : -keys.swAxis;   // swD: turret direction/amount, 1 = full left
   const prev = [m.x, m.y, m.h, m.steer], s0 = m.steer;
   m.swung = false;
-  if (m.swingable && on && keys.swl !== keys.swr) {
-    const sw0 = m.swing; m.swing += (keys.swl ? 1 : -1) * 0.9 * dt; m.swung = true;
+  if (m.swingable && on && swD) {
+    const sw0 = m.swing; m.swing += swD * 0.9 * dt; m.swung = true;
     if (m === david && scene === 'snow' && armHits(m.x, m.y, m.h, m.swing) && !armHits(m.x, m.y, m.h, sw0)) { m.swing = sw0; m.swung = false; if (m === active) bump(1.2); }   // nosturi ei käänny seinän läpi   // turn the upper structure with its own buttons
   }
   if (k.left && !k.right) m.steer = Math.min(m.maxSteer, m.steer + (m.art ? 0.9 : 1.5) * dt);
   else if (k.right && !k.left) m.steer = Math.max(-m.maxSteer, m.steer - (m.art ? 0.9 : 1.5) * dt);
+  else if (sAx) m.steer = approach(m.steer, -sAx * m.maxSteer, (m.art ? 0.9 : 1.5) * dt);   // gamepad stick: the stick position is the steering angle
   else if (on) m.steer = approach(m.steer, 0, 0.8 * dt * (m.art ? Math.min(1, Math.abs(m.speed) / 0.5) : 1));
   const target = k.up ? m.vmax : k.down ? -m.vrev : 0;
   m.speed = approach(m.speed, target, (target === 0 ? 2.8 : 1.8) * dt);
