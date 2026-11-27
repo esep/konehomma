@@ -263,6 +263,12 @@ function settle(b) {
       return;
     }
     const dx = b.x - SJ.x, dy = b.y - SJ.y, d = Math.hypot(dx, dy);
+    if (b.z > BR + gz(b.x, b.y) + BR * 0.5) {   // lifted off the ground: it needs three balls below it (a hollow), otherwise it rolls away from them
+      let n = 0, sx = 0, sy = 0; const ix = Math.floor(b.x / GC), iy = Math.floor(b.y / GC);
+      for (let gx = ix - 1; gx <= ix + 1; gx++) for (let gy = iy - 1; gy <= iy + 1; gy++) { const cell = grid.get(gkey(gx, gy)); if (!cell) continue;
+        for (const o of cell) { if (o === b || o.st !== 'rest' || o.z > b.z - BR * 0.3) continue; const ex = b.x - o.x, ey = b.y - o.y; if (ex * ex + ey * ey < D2 * 1.1) { n++; sx += ex; sy += ey; } } }
+      if (n < 3) { const l = Math.hypot(sx, sy); let ux, uy; if (l < 1e-4) { const a = Math.random() * 6.283; ux = Math.cos(a); uy = Math.sin(a); } else { ux = sx / l; uy = sy / l; } b.x += ux * BR * 0.6; b.y += uy * BR * 0.6; continue; }
+    }
     if (d < BR * 1.75) {              // perched on top of one ball: roll off
       let ux, uy;
       if (d < 1e-4) { const a = Math.random() * 6.283; ux = Math.cos(a); uy = Math.sin(a); } else { ux = dx / d; uy = dy / d; }

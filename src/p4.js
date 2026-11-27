@@ -254,7 +254,8 @@ function update(dt) {
       b.t += dt * 1.8 / CR_LEN;
       const d = b.t * CR_LEN, off = 0.1 + BR;
       [b.x, b.y, b.z] = crLocal(CR_B0[0] + CR_DU * d - CR_DW * off, b.side, CR_B0[2] + CR_DW * d + CR_DU * off);
-      if (b.t >= 1) { b.st = 'fall'; b.vx = cc * 0.8 + (Math.random() - 0.5) * 0.3; b.vy = cs * 0.8 + (Math.random() - 0.5) * 0.3; b.vz = 0.4; }
+      if (b.t >= 1) { b.st = 'fall'; const fw = 0.5 + Math.random() * 1.6, sd = (Math.random() - 0.5) * 1.0;   // the stream fans out: different throw lengths and sideways scatter, so the pile is a wide heap, not a column
+        b.vx = cc * fw - cs * sd; b.vy = cs * fw + cc * sd; b.vz = 0.4; }
     }
   }
 
@@ -296,6 +297,10 @@ function update(dt) {
         continue;
       }
       if (lu > -0.05 && lu < 1.3 && Math.abs(lv) < 0.9) { push(LF, b, -0.05, 1.3, 0.9, lu, lv); continue; }
+    }
+    if (b.st === 'fall' && b.z < 2.05 && b.z >= 0.95) {   // falling stones must not pass through the cab roof: they slide off the cab (towards the bed or the side)
+      const dx = b.x - truck.x, dy = b.y - truck.y, lu = dx * tc + dy * ts, lv = -dx * ts + dy * tc;
+      if (lu > 1.1 && lu < 2.2 && Math.abs(lv) < 0.95) { push(truck, b, 1.1, 2.2, 0.95, lu, lv); continue; }
     }
     if (b.z < 0.95) for (const m of bodies) {
       const mc = Math.cos(m.h), ms = Math.sin(m.h), dx = b.x - m.x, dy = b.y - m.y, lu = dx * mc + dy * ms, lv = -dx * ms + dy * mc;

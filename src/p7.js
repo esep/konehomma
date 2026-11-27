@@ -346,8 +346,8 @@ function gpPoll() {
   }
   if (startEdge) { showMenu(); return; }
   if (backEdge) { firstInput(); nextMachine(); }
-  gpSet('up', b(7)); gpSet('down', b(6));
-  gpSet('left', b(14)); gpSet('right', b(15));                     // D-pad: digital as on the keyboard
+  gpSet('up', b(7) || b(12)); gpSet('down', b(6) || b(13));       // RT / D-pad up = forward, LT / D-pad down = reverse
+  gpSet('left', b(14)); gpSet('right', b(15));                     // D-pad left/right = arrow keys
   keys.steerAxis = gpAnalog(pad.axes[0] || 0);                    // left stick: analog steering
   gpSet('swl', b(4)); gpSet('swr', b(5));                          // bumpers: digital turret turn
   keys.swAxis = gpAnalog(pad.axes[2] || 0);                        // right stick: analog turret turn
